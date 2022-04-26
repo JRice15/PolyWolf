@@ -9,29 +9,8 @@ from logging import getLogger, StreamHandler, Formatter, FileHandler
 import aiwolfpy
 import argparse
 
-# name
-myname = 'sample_python'
-
 # content factory
 cf = aiwolfpy.ContentFactory()
-
-# logger
-logger = getLogger("aiwolfpy")
-logger.setLevel(logging.NOTSET)
-# handler
-stream_handler = StreamHandler()
-stream_handler.setLevel(logging.NOTSET)
-handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-stream_handler.setFormatter(handler_format)
-
-
-logger.addHandler(stream_handler)
-
-# file_handler = FileHandler('aiwolf_game.log')
-# file_handler.setLevel(logging.WARNING)
-# file_handler.setFormatter(handler_format)
-# logger.addHandler(file_handler)
-
 
 class SampleAgent(object):
     
@@ -83,21 +62,44 @@ class SampleAgent(object):
         return None
     
 
-agent = SampleAgent()
+def run_agent():
+    # read args
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-p', type=int, action='store', dest='port')
+    parser.add_argument('-h', type=str, action='store', dest='hostname')
+    parser.add_argument('-r', type=str, action='store', dest='role', default='none')
+    parser.add_argument('-n', type=str, action='store', dest='name', default='sample_python')
+    input_args = parser.parse_args()
 
-# read args
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument('-p', type=int, action='store', dest='port')
-parser.add_argument('-h', type=str, action='store', dest='hostname')
-parser.add_argument('-r', type=str, action='store', dest='role', default='none')
-parser.add_argument('-n', type=str, action='store', dest='name', default=myname)
-input_args = parser.parse_args()
+    # logger
+    logger = getLogger("aiwolfpy")
+    logger.setLevel(logging.NOTSET)
+    # handler
+    stream_handler = StreamHandler()
+    stream_handler.setLevel(logging.NOTSET)
+    handler_format = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    stream_handler.setFormatter(handler_format)
 
+    logger.addHandler(stream_handler)
 
-client_agent = aiwolfpy.AgentProxy(
-    agent, input_args.name, input_args.hostname, input_args.port, input_args.role, logger, "pandas"
-)
+    # file_handler = FileHandler('aiwolf_game.log')
+    # file_handler.setLevel(logging.WARNING)
+    # file_handler.setFormatter(handler_format)
+    # logger.addHandler(file_handler)
+
+    client_agent = aiwolfpy.AgentProxy(
+        agent=SampleAgent(), 
+        my_name=input_args.name, 
+        host_name=input_args.hostname, 
+        port=input_args.port, 
+        role=input_args.role, 
+        logger=logger, 
+        parse="pandas"
+    )
+
+    client_agent.connect_server()
+
 
 # run
 if __name__ == '__main__':
-    client_agent.connect_server()
+    run_agent()
