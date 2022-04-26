@@ -24,6 +24,8 @@ And then to activate:
   * The server application will print the log to the terminal, and also to the application window. Also, a log file will be saved on "./log".
 * You can see a fun visualization using the "log viewer" program.
 
+* Run `./AutoStarter.sh` to simulate games automatically with no GUI inputs (configured in `AutoStart.ini`)
+
 # Running the agent on the AIWolf competition server:
 * After you create your account in the competition server, make sure your client's name is the same as your account's name.
 * The python packages available at the competition server are listed in this [page](http://aiwolf.org/python_modules)
