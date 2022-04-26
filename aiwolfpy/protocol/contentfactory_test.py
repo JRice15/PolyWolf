@@ -9,7 +9,7 @@ sp = aiwolfpy.Species()
 
 
 # unit test
-class MyTestCase(unittest.TestCase):
+class ContentTests(unittest.TestCase):
 
     def test_case1(self):
         self.assertEqual(

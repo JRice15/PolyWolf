@@ -5,7 +5,7 @@ pr = aiwolfpy.ProtocolParser()
 
 
 # unit test
-class MyTestCase(unittest.TestCase):
+class ParserTests(unittest.TestCase):
 
     def test_case1(self):
         sentence = 'ESTIMATE Agent[10] BODYGUARD'

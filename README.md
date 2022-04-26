@@ -4,32 +4,22 @@ Create python agents that can play Werewolf, following the specifications of the
 
 This has been forked from the official repository by the AIWolf project, and was originally created by [Kei Harada](https://github.com/k-harada).
 
-# Changelog:
+# Environment
+I (jr) created a conda environment file to the specs of the python packages on the contest server (http://aiwolf.org/python_modules). You can create the env like the following, if you have conda set up already:
 
-## Version 0.4.9a
-* Added support material in English
+`conda env create -n aiwolf -f env.yml`
 
-## Version 0.4.9
-* Changed differential structure (diff_data) into a DataFrame
+And then to activate:
 
-## Version 0.4.4
-* removed daily_finish
-* Added update callback (with request parameter)
-* Connecting is now done through a instance, not a class
-
-## Version 0.4.0
-* Support for python3
-* Made file structure much simpler
+`conda activate aiwolf`
 
 # Running the agent and the server locally:
-* Download the AIWolf platform from the [AIWolf public website] (http://www.aiwolf.org/server/)
-	* Don't forget that the local AIWolf server requires JDK 11
+* Get AIWolf server platform (already included in this repo, in `AIWolf-ver0.6.3`)
+	* Don't forget that the local AIWolf server requires JDK 11+
 * Start the server with `./StartServer.sh`
 	* This runs a Java application. Select the number of players, the connection port, and press "Connect".
-* In another terminal, run the client management application `./StartGUIClient.sh`
-	* Another Java application is started. Select the client jar file (sampleclient.jar), the sample client pass, and the port configured for the server.
-	* Press "Connect" for each instance of the sample agent you wish to connect.
-* Run the python agent from this repository, with the command: `./python_sample.py -h [hostname] -p [port]`
+* Run python agents from this repository, with the command: `./python_sample.py -h localhost -p [port]`
+	* You can run them in the background by adding ` &` to the end of the command, so that you don't have to open N terminals.
 * On the server application, press "Start Game".
   * The server application will print the log to the terminal, and also to the application window. Also, a log file will be saved on "./log".
 * You can see a fun visualization using the "log viewer" program.
