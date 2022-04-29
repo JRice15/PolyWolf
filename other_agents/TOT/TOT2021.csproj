@@ -1,0 +1,79 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <UserSecretsId>9a4d732e-0d95-4221-9553-ad2ea48a7e08</UserSecretsId>
+    <Nullable>enable</Nullable>
+    <Version>3.0.2</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="TOT2021\**" />
+    <EmbeddedResource Remove="TOT2021\**" />
+    <None Remove="TOT2021\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="model05\werewolf\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model05\villager\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model05\seer\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model05\possessed\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model05\werewolf\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model05\villager\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model05\seer\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model05\possessed\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day01\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day02\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day03\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day04\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day05\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day06\bestModel.onnx" />
+    <EmbeddedResource Include="model15\werewolf\day07\bestModel.onnx" />
+    <EmbeddedResource Include="model15\villager\day07\bestModel.onnx" />
+    <EmbeddedResource Include="model15\seer\day07\bestModel.onnx" />
+    <EmbeddedResource Include="model15\possessed\day07\bestModel.onnx" />
+    <EmbeddedResource Include="model15\medium\day07\bestModel.onnx" />
+    <EmbeddedResource Include="model15\bodyguard\day07\bestModel.onnx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AIWolfServer" Version="2.2.0" />
+    <PackageReference Include="OpenCvSharp4" Version="4.5.2.20210404" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.5.2.20210404" />
+  </ItemGroup>
+
+</Project>
