@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import glob
+import argparse
 
 def strip_num(x):
     return x.rstrip("0123456789")
@@ -57,4 +58,7 @@ def analyze_logs(root):
  
 
 if __name__ == "__main__":
-    analyze_logs("AIWolf-ver0.6.3/log/")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path",help="path to logs dir")
+    ARGS = parser.parse_args()
+    analyze_logs(ARGS.path)
