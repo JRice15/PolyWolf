@@ -43,14 +43,18 @@ def analyze_logs(root):
     plays_df["total"] = plays_df.sum(axis=1)
     wins_df["total"] = wins_df.sum(axis=1)
 
+    print("Wins:")
     print(wins_df)
+    print("Plays:")
     print(plays_df)
 
     avg_df = wins_df / plays_df
 
-    print(avg_df)    
+    print("Winning pcts:")
+    print(avg_df)
+    print(avg_df[["total"]])
 
-    return 
+ 
 
 if __name__ == "__main__":
     analyze_logs("AIWolf-ver0.6.3/log/")

@@ -9,5 +9,3 @@ jsonic-1.3.10.jar:\
 ../other_agents/TeamTomato/TomatoAgent.jar:\
 ../other_agents/TOKU/bin \
 org.aiwolf.ui.bin.AutoStarter AutoStarter.ini
-
-# read Wait

@@ -127,3 +127,5 @@ dmypy.json
 # misc
 .DS_Store
 
+# outputs
+sims/
