@@ -1,22 +1,14 @@
 from aiwolf import AbstractPlayer, Agent, Content, GameInfo, GameSetting, Role
 
-from bodyguard import Bodyguard
-from medium import Medium
-from possessed import Possessed
-from seer import Seer
-from villager import Villager
-from werewolf import Werewold
+from roles.bodyguard import Bodyguard
+from roles.medium import Medium
+from roles.possessed import Possessed
+from roles.seer import Seer
+from roles.villager import Villager
+from roles.werewolf import Werewolf
 
 
 class RoleAssignPlayer(AbstractPlayer):
-
-    villager: AbstractPlayer
-    bodyguard: AbstractPlayer
-    medium: AbstractPlayer
-    seer: AbstractPlayer
-    possessed: AbstractPlayer
-    werewolf: AbstractPlayer
-    player: AbstractPlayer
 
     def __init__(self) -> None:
         self.villager = Villager()

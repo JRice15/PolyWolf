@@ -2,11 +2,11 @@ import random
 from typing import List
 
 from aiwolf import (Agent, AttackContentBuilder, ComingoutContentBuilder,
-                    Content, GameInfo, GameSetting, Judge, Role, Species)
+                    Content, GameInfo, GameSetting, Role, Species)
 from aiwolf.constant import AGENT_NONE
 
-from const import CONTENT_SKIP, JUDGE_EMPTY
-from possessed import Possessed
+from const import CONTENT_SKIP
+from roles.possessed import Possessed
 
 
 class Werewolf(Possessed):

@@ -1,0 +1,11 @@
+AIWolf-ver0.6.3/aiwolf-server.jar
+AIWolf-ver0.6.3/aiwolf-common.jar
+AIWolf-ver0.6.3/aiwolf-client.jar
+AIWolf-ver0.6.3/aiwolf-viewer.jar
+AIWolf-ver0.6.3/jsonic-1.3.10.jar
+
+other_agents/TakedaAgent/takedaAgent.jar
+other_agents/TeamSashimi/SashimiAgent.jar
+other_agents/TeamTomato/TomatoAgent.jar
+other_agents/TOKU/bin
+other_agents/TeamSashimi/SashimiAgent.jar

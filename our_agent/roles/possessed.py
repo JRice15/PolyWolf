@@ -4,12 +4,12 @@ from typing import Deque, List
 
 from aiwolf import (Agent, ComingoutContentBuilder, Content,
                     DivinedResultContentBuilder, GameInfo, GameSetting,
-                    IdentContentBuilder, Judge, Role, Species,
+                    IdentContentBuilder, Role, Species,
                     VoteContentBuilder)
 from aiwolf.constant import AGENT_NONE
 
-from const import CONTENT_SKIP, JUDGE_EMPTY
-from villager import Villager
+from const import CONTENT_SKIP
+from roles.villager import Villager
 
 
 class Possessed(Villager):

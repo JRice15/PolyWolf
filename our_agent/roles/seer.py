@@ -2,12 +2,12 @@ from collections import deque
 from typing import Deque, List, Optional
 
 from aiwolf import (Agent, ComingoutContentBuilder, Content,
-                    DivinedResultContentBuilder, GameInfo, GameSetting, Judge,
+                    DivinedResultContentBuilder, GameInfo, GameSetting,
                     Role, Species, VoteContentBuilder)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP
-from villager import Villager
+from roles.villager import Villager
 
 
 class Seer(Villager):

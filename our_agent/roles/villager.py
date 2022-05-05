@@ -2,7 +2,7 @@ import random
 from typing import Dict, List
 
 from aiwolf import (AbstractPlayer, Agent, Content, GameInfo, GameSetting,
-                    Judge, Role, Species, Status, Talk, Topic,
+                    Role, Species, Status, Talk, Topic,
                     VoteContentBuilder)
 from aiwolf.constant import AGENT_NONE
 

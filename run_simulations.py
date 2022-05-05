@@ -20,6 +20,8 @@ ALL_AGENTS = {
     "Takeda": "java,org.aiwolf.takeda.TakedaRoleAssignPlayer",
     "TOKU": "java,org.aiwolf.TOKU.TOKURoleAssginPlayer",
     "Tomato": "java,com.gmail.toooo1718tyan.Player.RoleAssignPlayer",
+    # broken for some reason
+    # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }
 
 CONFIG_FORMAT = """
@@ -35,27 +37,21 @@ setting={ROOT}/AIWolf-ver0.6.3/SampleSetting.cfg
 {agents}
 """
 
-# classpath elements
-CLASSPATH_LIST = [
-    # server files
-    "{ROOT}/AIWolf-ver0.6.3/aiwolf-server.jar",
-    "{ROOT}/AIWolf-ver0.6.3/aiwolf-common.jar",
-    "{ROOT}/AIWolf-ver0.6.3/aiwolf-client.jar",
-    "{ROOT}/AIWolf-ver0.6.3/aiwolf-viewer.jar",
-    "{ROOT}/AIWolf-ver0.6.3/jsonic-1.3.10.jar",
-    # agent jars (all are included regardless of it they are used, since it doesn't hurt)
-    "{ROOT}/other_agents/TakedaAgent/takedaAgent.jar",
-    "{ROOT}/other_agents/TeamSashimi/SashimiAgent.jar",
-    "{ROOT}/other_agents/TeamTomato/TomatoAgent.jar",
-    "{ROOT}/other_agents/TOKU/bin",
-]
+# load classpath
+with open(f"{ROOT}/classpath_list.txt", "r") as f:
+    CLASSPATH = f.readlines()
+CLASSPATH = [x.strip() for x in CLASSPATH]
+CLASSPATH = ":".join([x for x in CLASSPATH if len(x)])
 
 
 def run_sim(sim_name, ARGS):
     os.makedirs(f"sims/{sim_name}", exist_ok=True)
 
+    # hardcoded agents
+    selected_agents = list(ARGS.use)
+    still_needed = ARGS.agents - len(selected_agents)
     # choose n agents
-    selected_agents = random.choices(list(ALL_AGENTS.keys()), k=ARGS.agents)
+    selected_agents += random.choices(list(ALL_AGENTS.keys()), k=still_needed)
     # format them
     selected_agents = [f"{name}{i},{ALL_AGENTS[name]}" for i,name in enumerate(selected_agents)]
     selected_agents_str = "\n".join(selected_agents)
@@ -68,8 +64,7 @@ def run_sim(sim_name, ARGS):
     with open(config_filename, "w") as f:
         f.write(config)
 
-    classpath = ":".join(CLASSPATH_LIST).format(ROOT=ROOT)
-    command = f"java -cp {classpath} org.aiwolf.ui.bin.AutoStarter {config_filename}"
+    command = f"java -cp {CLASSPATH} org.aiwolf.ui.bin.AutoStarter {config_filename}"
 
     subprocess.run(command, shell=True)
 
@@ -86,8 +81,8 @@ def main():
     parser.add_argument("--sims",type=int,default=1,help="number of randomized n-game sims to run")
     parser.add_argument("--games",type=int,default=100,help="number of game per sim to run")
     parser.add_argument("--agents",type=int,default=15,help="number of agents, 5 or 15")
+    parser.add_argument("--use",nargs="+",default=(),help="include these specific agents (by name, duplicates allowed)")
     ARGS = parser.parse_args()
-
 
     for _ in range(ARGS.sims):
         sim_name = "{}/sim_{}".format(ARGS.name, datetime.now().isoformat())

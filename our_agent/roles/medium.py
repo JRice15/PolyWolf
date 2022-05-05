@@ -2,7 +2,7 @@ from collections import deque
 from typing import Deque, List, Optional
 
 from aiwolf import (Agent, ComingoutContentBuilder, Content, GameInfo,
-                    GameSetting, IdentContentBuilder, Judge, Role, Species,
+                    GameSetting, IdentContentBuilder, Role, Species,
                     VoteContentBuilder)
 from aiwolf.constant import AGENT_NONE
 
