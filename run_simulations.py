@@ -1,9 +1,11 @@
 import argparse
-import subprocess
-from datetime import datetime
+import glob
 import os
 import random
+import shutil
+import subprocess
 import sys
+from datetime import datetime
 
 # add the root dir to the path
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -11,10 +13,9 @@ sys.path.append(ROOT)
 
 from analyze_logs import analyze_logs
 
-
 ALL_AGENTS = {
     "SampleJava": "java,org.aiwolf.sample.player.SampleRoleAssignPlayer",
-    "SamplePy": f"python,{ROOT}/sample_python_agent/start.py",
+    "SamplePy": f"python,{ROOT}/other_agents/sample_python_agent/start.py",
     "HALU": f"python,{ROOT}/other_agents/HALU/HALUemon.py",
     "OKAMI": f"python,{ROOT}/other_agents/OKAMI/OKAMI.py",
     "Takeda": "java,org.aiwolf.takeda.TakedaRoleAssignPlayer",
@@ -68,11 +69,23 @@ def run_sim(sim_name, ARGS):
 
     subprocess.run(command, shell=True)
 
-    # signal file that sim completed
-    with open(f"sims/{sim_name}/sim_complete.txt", "w") as f:
-        f.write(datetime.now().isoformat())
+    logs = glob.glob(f"{ROOT}/sims/{sim_name}/logs/???.log")
+    if len(logs) < ARGS.games:
+        print("Only", len(logs), "found")
+    else:
+        # signal file that sim completed
+        with open(f"{ROOT}/sims/{sim_name}/sim_complete.txt", "w") as f:
+            f.write(datetime.now().isoformat())
 
-    analyze_logs(f"sims/{sim_name}/logs/")
+        analyze_logs(f"sims/{sim_name}/logs/")
+
+
+def clean_sims(simset_name):
+    # remove sim dirs that did not complete their simulation
+    for dirn in glob.glob(f"{ROOT}/sims/{simset_name}/sim_*/"):
+        if not os.path.exists(dirn + "sim_complete.txt"):
+            print("removing", dirn)
+            shutil.rmtree(dirn)
 
 
 def main():
@@ -82,11 +95,27 @@ def main():
     parser.add_argument("--games",type=int,default=100,help="number of game per sim to run")
     parser.add_argument("--agents",type=int,default=15,help="number of agents, 5 or 15")
     parser.add_argument("--use",nargs="+",default=(),help="include these specific agents (by name, duplicates allowed)")
+    parser.add_argument("--priority",type=int,default=0,help="priority to have the OS assign to this process (higher num means lower priority)")
     ARGS = parser.parse_args()
 
-    for _ in range(ARGS.sims):
-        sim_name = "{}/sim_{}".format(ARGS.name, datetime.now().isoformat())
-        run_sim(sim_name, ARGS)
+    try:
+        old = os.nice(0)
+        new = os.nice(ARGS.priority)
+        print("Set niceness from", old, "to", new)
+    except Exception as e:
+        print("Error setting os.nice priority value:", e)
+
+    simset_name = "{}player_{}game/{}".format(ARGS.agents, ARGS.games, ARGS.name)
+
+    try:
+        for _ in range(ARGS.sims):
+            sim_name = simset_name + "/sim_{}".format(datetime.now().isoformat())
+            run_sim(sim_name, ARGS)
+    except (Exception, KeyboardInterrupt) as e:
+        # remove unfinished sims
+        clean_sims(simset_name)
+        # reraise error
+        raise e
 
 
 
