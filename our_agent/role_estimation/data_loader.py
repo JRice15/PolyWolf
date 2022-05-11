@@ -35,6 +35,18 @@ DTYPES = {
     "target_id": float,
 }
 
+# what each role has visible to them
+ALL_VISIBILITY = ["talk", "vote"]
+ROLE_VISIBILITY = {
+    "BODYGUARD": ["guard"],
+    "MEDIUM": ["execute"],
+    "SEER": ["divine"],
+    "POSSESSED": [],
+    "VILLAGER": [],
+    "WEREWOLF": ["whisper", "attack", "attackVote"],
+}
+
+
 def read_one_log(log_path):
     with open(log_path, newline='') as csvfile:
         log_reader = csv.reader(csvfile, delimiter=',')
@@ -97,6 +109,18 @@ def read_logs(log_dir):
     return full_df, full_roles
 
 
+
+
+
+def filter_by_role(df, role):
+    """
+    return a dataframe with only the actions visible to this this role
+    """
+    visible_types = ALL_VISIBILITY + ROLE_VISIBILITY[role]
+    return df[df["type"].apply(lambda x: x in visible_types)]
+
+
+
 if __name__ == "__main__":
     sim_dirs = glob.glob(f"{REPO_ROOT}/sims/15player_100game/random/*/logs/")
 
@@ -104,3 +128,5 @@ if __name__ == "__main__":
 
     print(log_df)
     print(roles_df)
+
+    print(log_df["content"].drop_duplicates())
