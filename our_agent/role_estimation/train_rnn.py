@@ -1,16 +1,18 @@
 import glob
 import os
-import sys
 import random
+import sys
 
-from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import Model, callbacks, layers
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+from tensorflow import keras
+from tensorflow.keras import Model
+from tensorflow.keras import backend as K
+from tensorflow.keras import callbacks, layers
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tqdm import tqdm
 
 AGENT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO_ROOT = os.path.dirname(AGENT_ROOT)
@@ -18,18 +20,18 @@ sys.path.append(AGENT_ROOT)
 
 from const import ROLES_5_PLAYER, ROLES_15_PLAYER
 
-from role_estimation.data_loader import read_logs, filter_by_role
+from role_estimation.data_loader import (N_INPUT_FEATURES, filter_by_role,
+                                         one_hot_encode, read_logs)
 
 # modifiable
 N_PLAYERS = 15
-BATCHSIZE = 2
-N_GAMES = 10
-VAL_SIZE = 1
-INPUT_FEATURES = ["agent_id", "target_id"]
-N_HIDDEN_UNITS = 128
+BATCHSIZE = 8
+N_GAMES = 100
+VAL_SIZE = 16
+N_HIDDEN_UNITS = 256
+DROP_SKIPS = True
 
 # don't modify
-N_INPUT_FEATURES = len(INPUT_FEATURES)
 ROLE_LIST = sorted(list(ROLES_15_PLAYER.keys()))
 N_ROLES = len(ROLE_LIST)
 
@@ -53,6 +55,7 @@ rolepred_gru = layers.GRU(
 inpt_features = layers.Input((None, N_INPUT_FEATURES,), name="features")
 # one-hot role encoding
 inpt_role = layers.Input((N_ROLES,), name="my_role")
+
 # result of GRU from previous games
 # inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
 
@@ -94,7 +97,8 @@ def get_simsets(num=8):
     Y_all = []
     for sim_dir in sim_dirs:
         print("  loading", sim_dir)
-        log_df, roles_df = read_logs(sim_dir)
+        log_df, roles_df = read_logs(sim_dir,
+                                drop_skips=DROP_SKIPS)
 
         X_all.append(log_df)
         Y_all.append(roles_df)
@@ -107,12 +111,7 @@ def build_batch(X, Y, my_agent_id, game, batchsize=BATCHSIZE):
     args:
         X, Y: raw batch of data. X is list of df, Y is np.absarray
         game: index of game (0 to 99)
-    """
-    # y_batch = Y[:,game]
-    # my_role_ints = y_batch[np.arange(len(my_agent_id)), my_agent_id]
-    # my_role_onehot = tf.one_hot(my_role_ints, depth=N_ROLES)
-    # my_roles = [ROLE_LIST[i] for i in my_role_ints]
-    
+    """    
     batch_targets = []
     batch_features = []
     batch_my_roles = []
@@ -130,17 +129,19 @@ def build_batch(X, Y, my_agent_id, game, batchsize=BATCHSIZE):
         # get X features
         df = X[batch_index].loc[game]
         df = filter_by_role(df, my_role)
-        df = df[INPUT_FEATURES].fillna(value=0.0)
-        batch_features.append(df.to_numpy())
+        # df = df[INPUT_FEATURES].fillna(value=-1)
+        arr = one_hot_encode(df)
+        batch_features.append(arr)
 
-    batch_targets = np.array(batch_targets)
-    batch_features = pad_sequences(batch_features, dtype="float64")
-    batch_my_roles = np.array(batch_my_roles)
+    batch_features = pad_sequences(batch_features, dtype=K.floatx())
+    batch_my_roles = tf.constant(batch_my_roles)
 
     inputs = {
         "features": batch_features,
         "my_role": batch_my_roles,
     }
+
+    batch_targets = tf.constant(batch_targets)
 
     return inputs, batch_targets
 
@@ -160,7 +161,7 @@ train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 
 X, Y = get_simsets(num=VAL_SIZE)
-val_agent_id = np.random.randint(N_PLAYERS, size=VAL_SIZE)
+val_agent_id = np.random.randint(N_PLAYERS, size=VAL_SIZE)+1
 VAL_INPUTS, VAL_TARGETS = build_batch(X, Y, val_agent_id, game=0, batchsize=VAL_SIZE)
 
 for epoch in range(100):
@@ -177,6 +178,9 @@ for epoch in range(100):
     final_preds = []
     final_targets = []
 
+    # track stats
+    game_lens = []
+
     # choose random agent to play as
     my_agent_id = np.random.randint(N_PLAYERS, size=BATCHSIZE)+1
 
@@ -185,6 +189,7 @@ for epoch in range(100):
     for game in prog_bar:
         inputs, targets = build_batch(X, Y, my_agent_id, game)
 
+        game_lens.append(inputs["features"].shape[1])
         # print("  seq len:", inputs["features"].shape[1])
 
         with tf.GradientTape() as tape:
@@ -210,7 +215,11 @@ for epoch in range(100):
 
         # game_states = np.concatenate() TODO
 
-    print("Mean train predictions per role (in final game):")
+    print("  seq lens:")
+    print("    avg:", np.mean(game_lens))
+    print("    max:", np.max(game_lens))
+
+    print("  Mean train predictions per role (in final game):")
     final_preds = tf.nn.softmax(np.stack(final_preds, axis=0), axis=-1).numpy().sum(axis=0).mean(axis=0)
     print(pd.DataFrame([final_preds], columns=sorted(list(ROLES_15_PLAYER.keys()))))
 
