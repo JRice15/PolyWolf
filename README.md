@@ -4,7 +4,7 @@ Create python agents that can play Werewolf, following the specifications of the
 
 This has been forked from the official repository by the AIWolf project, and was originally created by [Kei Harada](https://github.com/k-harada).
 
-# Environment
+# Conda Environment
 I (jr) created a conda environment file to the specs of the python packages on the contest server (http://aiwolf.org/python_modules). You can create the env like the following, if you have conda set up already:
 
 `conda env create -n aiwolf -f env.yml`

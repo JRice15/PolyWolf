@@ -197,8 +197,10 @@ training loop
 optimizer = keras.optimizers.Adam(learning_rate=1e-3)
 loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
-train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+train_wholegame_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+val_wholegame_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+train_final_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+val_final_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 
 print("Loading val data...")
 X, Y = get_simsets(num=ARGS.valsize)
@@ -213,13 +215,15 @@ def train_step(inputs, targets):
 
     with tf.GradientTape() as tape:
         outputs = model(inputs, training=True)
-        loss_value = loss_fn(targets, outputs["preds"][::SAMPLE_LOSS_EVERY])
+        preds = outputs["preds"][:,::SAMPLE_LOSS_EVERY]
+        loss_value = loss_fn(targets, preds)
 
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
     # Update training metric.
-    # train_acc_metric.update_state(targets, outputs["preds"])
+    train_wholegame_acc_metric.update_state(targets, preds)
+    train_final_acc_metric.update_state(targets[:,-1], preds[:,-1])
     
     return loss_value, outputs
 
@@ -229,9 +233,11 @@ def val_step(inputs, targets):
     targets = tf.tile(tf.reshape(targets, (-1,1,N_PLAYERS)), [1,seq_len,1])
 
     outputs = model(inputs)
-    loss_value = loss_fn(targets, outputs["preds"])
+    preds = outputs["preds"]
+    loss_value = loss_fn(targets, preds)
 
-    val_acc_metric.update_state(targets, outputs["preds"])    
+    val_wholegame_acc_metric.update_state(targets, preds)    
+    val_final_acc_metric.update_state(targets[:,-1], preds[:,-1])
 
     return loss_value
 
@@ -311,24 +317,28 @@ for epoch in range(1000):
     val_loss = val_step(VAL_INPUTS, VAL_TARGETS)
     val_loss = val_loss.numpy()
     print("  Loss:")
-    print("    Train:", train_loss)
-    print("    Val:  ", val_loss)
+    print("    Train (subsampled):", train_loss)
+    print("    Val (whole game):  ", val_loss)
 
     # accuracies
-    train_acc = train_acc_metric.result()
-    train_acc_metric.reset_states()
-    val_acc = val_acc_metric.result()
-    val_acc_metric.reset_states()
     print("  Accuracy:")
-    print("    Train:", train_acc.numpy())
-    print("    Val:  ", val_acc.numpy())
+    print("    Train, wholegame:  ", train_wholegame_acc_metric.result().numpy())
+    print("    Val, wholegame:    ", val_wholegame_acc_metric.result().numpy())
+    print("    Train, end-of-game:", train_final_acc_metric.result().numpy())
+    print("    Val, end-of-game:  ", val_final_acc_metric.result().numpy())
+
+
+    train_wholegame_acc_metric.reset_states()
+    train_final_acc_metric.reset_states()
+    val_wholegame_acc_metric.reset_states()
+    val_final_acc_metric.reset_states()
 
     """
     callbacks
     """
 
     # save model
-    if val_loss < best_val_loss:
+    if val_loss < best_val_loss - 1e-6:
         print("  Best val loss achieved. Saving model...")
         best_val_loss = val_loss
         best_epoch = epoch
