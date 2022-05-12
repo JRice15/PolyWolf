@@ -246,7 +246,8 @@ for epoch in range(1000):
         game_lens.append(inputs["features"].shape[1])
         # print("  seq len:", inputs["features"].shape[1])
 
-        loss_value, preds = train_step(inputs, targets)
+        train_loss, preds = train_step(inputs, targets)
+        train_loss = train_loss.numpy()
 
         # save predictions of final game
         if game == N_GAMES-1:
@@ -254,7 +255,7 @@ for epoch in range(1000):
                 final_preds.append(preds[f"agent{i}_pred"])
 
         # show train loss in progress bar
-        game_counter.set_postfix({"train loss": loss_value.numpy()})
+        game_counter.set_postfix({"train loss": train_loss})
 
         # game_states = np.concatenate() TODO
 
@@ -270,18 +271,21 @@ for epoch in range(1000):
     final_preds = tf.nn.softmax(np.stack(final_preds, axis=0), axis=-1).numpy().sum(axis=0).mean(axis=0)
     print(pd.DataFrame([final_preds], columns=sorted(list(ROLES_15_PLAYER.keys()))))
 
-    # Val loss
+    # losses
     val_loss = val_step(VAL_INPUTS, VAL_TARGETS)
     val_loss = val_loss.numpy()
-    print("  Validation loss:", val_loss)
+    print("  Loss:")
+    print("    Train:", train_loss)
+    print("    Val:  ", val_loss)
 
-    # Train and Val accuracies
+    # accuracies
     train_acc = train_acc_metric.result()
     train_acc_metric.reset_states()
-    print("  Train acc:", train_acc.numpy())
     val_acc = val_acc_metric.result()
     val_acc_metric.reset_states()
-    print("  Validation acc:", val_acc.numpy())
+    print("  Accuracy:")
+    print("    Train:", train_acc.numpy())
+    print("    Val:  ", val_acc.numpy())
 
     """
     callbacks
