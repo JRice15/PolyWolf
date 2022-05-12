@@ -2,6 +2,7 @@ import glob
 import os
 import random
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -25,15 +26,15 @@ from role_estimation.data_loader import (N_INPUT_FEATURES, filter_by_role,
 
 # modifiable
 N_PLAYERS = 15
-BATCHSIZE = 8
-N_GAMES = 100
-VAL_SIZE = 16
-N_HIDDEN_UNITS = 256
+BATCHSIZE = 16
+VAL_SIZE = 32
+N_HIDDEN_UNITS = 512
 DROP_SKIPS = True
 
 # don't modify
 ROLE_LIST = sorted(list(ROLES_15_PLAYER.keys()))
 N_ROLES = len(ROLE_LIST)
+N_GAMES = 100
 
 """
 Build RNN model
@@ -164,8 +165,14 @@ X, Y = get_simsets(num=VAL_SIZE)
 val_agent_id = np.random.randint(N_PLAYERS, size=VAL_SIZE)+1
 VAL_INPUTS, VAL_TARGETS = build_batch(X, Y, val_agent_id, game=0, batchsize=VAL_SIZE)
 
-for epoch in range(100):
+
+best_val_loss = np.inf
+best_epoch = -1
+
+for epoch in range(1000):
     print("\n*** Epoch", epoch, "***")
+    starttime = time.perf_counter()
+
     # get `batchsize` games
     X, Y = get_simsets(num=BATCHSIZE)
     # X: df with multiindex for utterances in games
@@ -201,8 +208,6 @@ for epoch in range(100):
                 if game == N_GAMES-1:
                     final_preds.append(pred_i)
                 loss_value += loss_fn(targets[:,i], pred_i)
-            # average over number of players
-            loss_value /= N_PLAYERS
 
         grads = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(grads, model.trainable_weights))
@@ -226,10 +231,29 @@ for epoch in range(100):
     # Display metrics at the end of each epoch.
     train_acc = train_acc_metric.result()
     train_acc_metric.reset_states()
-    print("  Epoch train acc:", train_acc.numpy())
+    print("  Train acc:", train_acc.numpy())
 
+    # Validation metrics
     val_preds = model(VAL_INPUTS)
+    val_loss = 0
+    for i in range(N_PLAYERS):
+        vpred_i = val_preds[f"agent{i}_pred"]
+        val_loss += loss_fn(VAL_TARGETS[:,i], vpred_i)
+    val_loss = val_loss.numpy()
+    print("  Validation loss:", val_loss)
+
     update_metric(val_acc_metric, VAL_TARGETS, val_preds)
     val_acc = val_acc_metric.result()
     val_acc_metric.reset_states()
-    print("  Epoch val acc:", val_acc.numpy())
+    print("  Validation acc:", val_acc.numpy())
+
+    if val_loss < best_val_loss:
+        print("  Best val loss achieved. Saving model...")
+        best_val_loss = val_loss
+        best_epoch = epoch
+        model.save(
+            "model.h5",
+            save_format="h5",
+        )
+    
+    print("  took", round(time.perf_counter() - starttime, 2), "secs")
