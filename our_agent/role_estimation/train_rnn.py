@@ -44,7 +44,7 @@ pprint(vars(ARGS))
 N_PLAYERS = ARGS.n_players
 ROLE_LIST = sorted(list(ROLES_15_PLAYER.keys()))
 N_ROLES = len(ROLE_LIST)
-N_GAMES = 10 #100
+N_GAMES = 100
 
 """
 Build RNN model
