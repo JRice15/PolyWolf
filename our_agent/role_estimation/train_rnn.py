@@ -40,6 +40,9 @@ ARGS = parser.parse_args()
 
 pprint(vars(ARGS))
 
+# can modify
+SAMPLE_LOSS_EVERY = 100
+
 # don't modify
 N_PLAYERS = ARGS.n_players
 ROLE_LIST = sorted(list(ROLES_15_PLAYER.keys()))
@@ -50,51 +53,81 @@ N_GAMES = 100
 Build RNN model
 """
 
-gamestate_gru = layers.GRU(
-    units=ARGS.n_hidden_units,
-    name="gamestate_gru"
-)
 
-# learn time-dependant features
-rolepred_gru = layers.GRU(
-        units=ARGS.n_hidden_units,
-        name="rolepred_gru",
-    )
+class MyConcat(layers.Layer):
+    """
+    concatenate a sequence, shape (batchsize, variable timesteps, features) ,
+    with a vector, shape (batchsize, length)
+    returns:
+        sequence, shape (batchsize, timesteps, features + length)
+    """
+
+    def call(self, x):
+        sequence, vector = x
+        timesteps = tf.shape(sequence)[-2]
+        vec_size = vector.shape[-1]
+        vector = tf.reshape(vector, (-1, 1, vec_size))
+        vector = tf.tile(vector, [1, timesteps, 1])
+        result = tf.concat([sequence, vector], axis=-1)
+        return result
 
 
-# unknown number of timesteps, each with n features
-inpt_features = layers.Input((None, N_INPUT_FEATURES,), name="features")
-# one-hot role encoding
-inpt_role = layers.Input((N_ROLES,), name="my_role")
+def build_model():
+    # gamestate_rnn = layers.GRU(
+    #     units=ARGS.n_hidden_units,
+    #     name="gamestate_gru"
+    # )
 
-# result of GRU from previous games
-# inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
-
-# gamestate = gamestate_gru(inpt_previous_states)
-learned_features = rolepred_gru(
-                        inpt_features, 
-                        # initial_state=gamestate
-                )
-
-full_features = layers.Concatenate(axis=-1)([learned_features, inpt_role])
-
-# one output prediction per agent
-# no softmaxes here because from_logits=True in loss
-outputs = {}
-for i in range(N_PLAYERS):
-    x = layers.Dense(N_ROLES, name=f"agent{i}_pred")(full_features)
-    outputs[f"agent{i}_pred"] = x 
-outputs["game_features"] = full_features
-
-model = Model(
-            [
-                inpt_features, 
-                inpt_role, 
-                # inpt_previous_states
-            ], 
-            outputs
+    # learn time-dependant features
+    rolepred_rnn = layers.GRU(
+            units=ARGS.n_hidden_units,
+            name="rolepred_gru",
+            return_sequences=True,
         )
 
+
+    # unknown number of timesteps, each with n features
+    inpt_features = layers.Input((None, N_INPUT_FEATURES,), name="features")
+    # one-hot role encoding
+    inpt_role = layers.Input((N_ROLES,), name="my_role")
+
+    full_features = MyConcat()([inpt_features, inpt_role])
+
+    # result of GRU from previous games
+    # inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
+    # gamestate = gamestate_rnn(inpt_previous_states)
+
+    learned_features = rolepred_rnn(
+                            full_features, 
+                            # initial_state=gamestate
+                    )
+
+    learned_features = layers.Reshape((-1, 1, ARGS.n_hidden_units))(learned_features)
+
+    # one output prediction per agent
+    # no softmaxes here because from_logits=True in loss
+    agent_preds = []
+    for i in range(N_PLAYERS):
+        x = layers.Dense(N_ROLES, name=f"agent{i}_pred")(learned_features)
+        agent_preds.append(x)
+    
+    agent_preds = layers.Concatenate(axis=-2, name="output_preds")(agent_preds)
+
+    model = Model(
+                [
+                    inpt_features, 
+                    inpt_role, 
+                    # inpt_previous_states
+                ], 
+                {
+                    "preds": agent_preds,
+                    "game_features": learned_features,
+                }
+            )
+    return model
+
+
+model = build_model()
 model.summary()
 
 """
@@ -174,33 +207,33 @@ VAL_INPUTS, VAL_TARGETS = build_batch(X, Y, val_agent_id, game=0, batchsize=ARGS
 
 @tf.function(experimental_relax_shapes=True)
 def train_step(inputs, targets):
+    seq_len = tf.shape(inputs["features"])[-2]
+    subsampled_seq_len = tf.math.ceil(seq_len / SAMPLE_LOSS_EVERY)
+    targets = tf.tile(tf.reshape(targets, (-1,1,N_PLAYERS)), [1,subsampled_seq_len,1])
+
     with tf.GradientTape() as tape:
-        preds = model(inputs, training=True)
-        # sum losses for each prediction
-        loss_value = 0
-        for i in range(N_PLAYERS):
-            pred_i = preds[f"agent{i}_pred"]
-            loss_value += loss_fn(targets[:,i], pred_i)
+        outputs = model(inputs, training=True)
+        loss_value = loss_fn(targets, outputs["preds"][::SAMPLE_LOSS_EVERY])
 
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
 
     # Update training metric.
-    for i in range(N_PLAYERS):
-        train_acc_metric.update_state(targets[:,i], preds[f"agent{i}_pred"])    
+    # train_acc_metric.update_state(targets, outputs["preds"])
     
-    return loss_value, preds
+    return loss_value, outputs
 
 @tf.function
-def val_step(val_inputs, val_targets):
-    val_preds = model(val_inputs)
-    val_loss = 0
-    for i in range(N_PLAYERS):
-        vpred_i = val_preds[f"agent{i}_pred"]
-        val_loss += loss_fn(val_targets[:,i], vpred_i)
-        val_acc_metric.update_state(val_targets[:,i], vpred_i)    
+def val_step(inputs, targets):
+    seq_len = tf.shape(inputs["features"])[-2]
+    targets = tf.tile(tf.reshape(targets, (-1,1,N_PLAYERS)), [1,seq_len,1])
 
-    return val_loss
+    outputs = model(inputs)
+    loss_value = loss_fn(targets, outputs["preds"])
+
+    val_acc_metric.update_state(targets, outputs["preds"])    
+
+    return loss_value
 
 
 best_val_loss = np.inf
@@ -223,9 +256,8 @@ for epoch in range(1000):
     # keep track of game states over the sim
     game_states = np.zeros((ARGS.batchsize, 1, ARGS.n_hidden_units))
 
-    # keep final preds
-    final_preds = []
-    final_targets = []
+    # keep maximum pred for each
+    max_preds = []
 
     # track stats
     game_lens = []
@@ -246,13 +278,17 @@ for epoch in range(1000):
         game_lens.append(inputs["features"].shape[1])
         # print("  seq len:", inputs["features"].shape[1])
 
-        train_loss, preds = train_step(inputs, targets)
+        train_loss, outputs = train_step(inputs, targets)
         train_loss = train_loss.numpy()
 
         # save predictions of final game
         if game == N_GAMES-1:
-            for i in range(N_PLAYERS):
-                final_preds.append(preds[f"agent{i}_pred"])
+            pred_probs = tf.nn.softmax(outputs["preds"], axis=-1).numpy()
+            pred_probs = np.squeeze(pred_probs)
+            # fill predictions for self with zeros
+            for i,a_id in enumerate(my_agent_id):
+                pred_probs[i,:,a_id-1] = 0
+            max_preds.append(pred_probs.max(axis=(0,1,2)))
 
         # show train loss in progress bar
         game_counter.set_postfix({"train loss": train_loss})
@@ -267,9 +303,9 @@ for epoch in range(1000):
     print("    avg:", np.mean(game_lens))
     print("    max:", np.max(game_lens))
 
-    print("  Mean train predictions per role (in final game):")
-    final_preds = tf.nn.softmax(np.stack(final_preds, axis=0), axis=-1).numpy().sum(axis=0).mean(axis=0)
-    print(pd.DataFrame([final_preds], columns=sorted(list(ROLES_15_PLAYER.keys()))))
+    print("  Max pred probability per role (in final train game):")
+    max_preds = np.max(max_preds, axis=0)
+    print("   ", dict(zip(ROLE_LIST, max_preds)))
 
     # losses
     val_loss = val_step(VAL_INPUTS, VAL_TARGETS)
