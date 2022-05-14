@@ -1,0 +1,64 @@
+# Do not change the ordering of lines this file (for ANY through Agent15, though more generally as well)
+
+# agents
+ANY
+Agent[01]
+Agent[02]
+Agent[03]
+Agent[04]
+Agent[05]
+Agent[06]
+Agent[07]
+Agent[08]
+Agent[09]
+Agent[10]
+Agent[11]
+Agent[12]
+Agent[13]
+Agent[14]
+Agent[15]
+
+# syntax
+(
+)
+
+# intent
+ESTIMATE
+COMINGOUT
+
+# current actions
+ATTACK
+DIVINATION
+GUARD
+VOTE
+
+# past actions
+ATTACKED
+DIVINED
+GUARDED
+IDENTIFIED
+VOTED
+
+# roles/races
+HUMAN
+BODYGUARD
+MEDIUM
+POSSESSED
+SEER
+VILLAGER
+WEREWOLF
+
+# misc
+REQUEST
+INQUIRE
+DAY
+
+# operators
+AND
+BECAUSE
+NOT
+XOR
+
+# pass
+SKIP
+OVER
