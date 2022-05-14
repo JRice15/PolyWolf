@@ -56,7 +56,7 @@ Build RNN model
 
 class MyConcat(layers.Layer):
     """
-    concatenate a sequence, shape (batchsize, variable timesteps, features) ,
+    concatenate a sequence, shape (batchsize, variable timesteps, features),
     with a vector, shape (batchsize, length)
     returns:
         sequence, shape (batchsize, timesteps, features + length)
