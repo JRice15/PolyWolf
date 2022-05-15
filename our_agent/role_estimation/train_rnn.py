@@ -33,9 +33,10 @@ parser.add_argument("--batchsize",type=int,default=16)
 parser.add_argument("--valsize",type=int,default=32)
 parser.add_argument("--n-hidden-units",type=int,default=512)
 parser.add_argument("--no-drop-skips",action="store_false",dest="drop_skips")
-parser.add_argument("--reducelr-epochs",type=int,default=15)
+parser.add_argument("--reducelr-epochs",type=int,default=5)
 parser.add_argument("--reducelr-factor",type=float,default=0.1)
 parser.add_argument("--earlystopping-epochs",type=int,default=12)
+parser.add_argument("--ngames",default=100,help="don't override this unless you are just testing stuff")
 ARGS = parser.parse_args()
 
 pprint(vars(ARGS))
@@ -47,7 +48,11 @@ SAMPLE_LOSS_EVERY = 100
 N_PLAYERS = ARGS.n_players
 ROLE_LIST = sorted(list(ROLES_15_PLAYER.keys()))
 N_ROLES = len(ROLE_LIST)
-N_GAMES = 100
+N_GAMES = ARGS.ngames
+
+# sanity checks
+assert ARGS.reducelr_epochs < ARGS.earlystopping_epochs
+assert ARGS.reducelr_factor < 1.0
 
 """
 Build RNN model
