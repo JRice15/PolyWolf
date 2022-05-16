@@ -97,15 +97,17 @@ def build_model():
     # one-hot id encoding
     inpt_id = layers.Input((N_PLAYERS,), name="my_id")
 
-    one_d_features = layers.Concatenate(axis=-1)([inpt_role, inpt_id])
-    all_inpt_features = MyConcat()([inpt_features, one_d_features])
+    one_d_features = layers.Concatenate(axis=-1, name="1d_features")([inpt_role, inpt_id])
+    all_sparse_features = MyConcat(name="all_sparse_features")([inpt_features, one_d_features])
+
+    all_dense_features = layers.Dense(units=128, activation="relu", name="all_dense_features")(all_sparse_features)
 
     # result of GRU from previous games
     # inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
     # gamestate = gamestate_rnn(inpt_previous_states)
 
     learned_features = rolepred_rnn(
-                            all_inpt_features, 
+                            all_dense_features, 
                             # initial_state=gamestate
                     )
 
@@ -117,7 +119,8 @@ def build_model():
     # no softmaxes here because from_logits=True in loss
     agent_preds = []
     for i in range(N_PLAYERS):
-        x = layers.Dense(N_ROLES, name=f"agent{i}_pred")(full_features)
+        x = layers.Dense(128, activation="relu", name=f"agent{i}_hidden")(full_features)
+        x = layers.Dense(N_ROLES, name=f"agent{i}_pred")(x)
         agent_preds.append(x)
     
     agent_preds = layers.Concatenate(axis=-2, name="output_preds")(agent_preds)
