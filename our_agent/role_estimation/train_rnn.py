@@ -28,16 +28,23 @@ from role_estimation.data_loader import (N_INPUT_FEATURES, filter_by_role,
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n-players",type=int,choices=(15,),default=15) # TODO allow 5 player
-parser.add_argument("--batchsize",type=int,default=16)
-parser.add_argument("--valsize",type=int,default=32)
-parser.add_argument("--sample-loss-freq",type=int,default=50)
-parser.add_argument("--n-hidden-units",type=int,default=512)
-parser.add_argument("--no-drop-skips",action="store_false",dest="drop_skips")
+# model params
+parser.add_argument("--n-hidden-units",type=int,default=512,help="size of each RNN layer")
+parser.add_argument("--n-layers",type=int,default=1,help="number of RNN layers to use")
+parser.add_argument("--rnn-type",choices=["gru","lstm"],default="lstm")
+parser.add_argument("--batchsize",type=int,default=32)
+
+# loss / hyper params
 parser.add_argument("--lr",type=float,default=1e-3,help="initial learning rate")
 parser.add_argument("--reducelr-epochs",type=int,default=5)
 parser.add_argument("--reducelr-factor",type=float,default=0.1)
 parser.add_argument("--earlystopping-epochs",type=int,default=12)
+parser.add_argument("--sample-loss-freq",type=int,default=50)
+parser.add_argument("--no-drop-skips",action="store_false",dest="drop_skips")
+
+# misc
+parser.add_argument("--valsize",type=int,default=64,help="number of simsets to use for validation")
+parser.add_argument("--n-players",type=int,choices=(15,),default=15) # TODO allow 5 player
 parser.add_argument("--ngames",default=100,type=int,help="don't override this unless you are just testing stuff")
 ARGS = parser.parse_args()
 
@@ -77,19 +84,33 @@ class MyConcat(layers.Layer):
 
 
 def build_model():
+    # learns time-dependant features
+    def get_rnn_layer(i):
+        layername = "rolepred_" + ARGS.rnn_type + str(i)
+        if ARGS.rnn_type == "gru":
+            return layers.GRU(
+                    units=ARGS.n_hidden_units,
+                    name=layername,
+                    return_sequences=True,
+                )
+        elif ARGS.rnn_type == "lstm":
+            return layers.LSTM(
+                    units=ARGS.n_hidden_units,
+                    name=layername,
+                    return_sequences=True,
+                )
+
     # gamestate_rnn = layers.GRU(
     #     units=ARGS.n_hidden_units,
     #     name="gamestate_gru"
     # )
+    # result of GRU from previous games
+    # inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
+    # gamestate = gamestate_rnn(inpt_previous_states)
 
-    # learn time-dependant features
-    rolepred_rnn = layers.GRU(
-            units=ARGS.n_hidden_units,
-            name="rolepred_gru",
-            return_sequences=True,
-        )
-
-
+    """
+    inputs
+    """
     # unknown number of timesteps, each with n features
     inpt_features = layers.Input((None, N_INPUT_FEATURES,), name="features")
     # one-hot role encoding
@@ -97,24 +118,24 @@ def build_model():
     # one-hot id encoding
     inpt_id = layers.Input((N_PLAYERS,), name="my_id")
 
+    """
+    hidden flow
+    """
     one_d_features = layers.Concatenate(axis=-1, name="1d_features")([inpt_role, inpt_id])
-    all_sparse_features = MyConcat(name="all_sparse_features")([inpt_features, one_d_features])
+    full_features = MyConcat(name="all_sparse_features")([inpt_features, one_d_features])
 
-    all_dense_features = layers.Dense(units=128, activation="relu", name="all_dense_features")(all_sparse_features)
+    full_features = layers.Dense(units=ARGS.n_hidden_units, activation="relu", name="all_dense_features")(full_features)
 
-    # result of GRU from previous games
-    # inpt_previous_states = layers.Input((None, N_HIDDEN_UNITS), name="prev_states")
-    # gamestate = gamestate_rnn(inpt_previous_states)
+    for i in range(ARGS.n_layers):
+        full_features = get_rnn_layer(i)(full_features)
 
-    learned_features = rolepred_rnn(
-                            all_dense_features, 
-                            # initial_state=gamestate
-                    )
-
-    full_features = MyConcat()([learned_features, one_d_features])
+    full_features = MyConcat()([full_features, one_d_features])
     # add a dimension
     full_features = layers.Reshape((-1, 1, full_features.shape[-1]))(full_features)
 
+    """
+    output flow
+    """
     # one output prediction per agent
     # no softmaxes here because from_logits=True in loss
     agent_preds = []
@@ -134,7 +155,7 @@ def build_model():
                 ], 
                 {
                     "preds": agent_preds,
-                    "game_features": learned_features,
+                    "game_features": full_features,
                 }
             )
     return model
@@ -218,8 +239,8 @@ optimizer = keras.optimizers.Adam(learning_rate=1e-3)
 loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
 train_wholegame_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-val_wholegame_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 train_final_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+val_wholegame_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 val_final_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 
 print("Loading val data...")
@@ -262,6 +283,30 @@ def val_step(inputs, targets):
     return loss_value
 
 
+def rolewise_accuracy(target, pred):
+    """
+    accuracy at predicting each role
+    target: (batchsize, nplayers) of int indexes into ROLE_LIST
+    pred: (batchsize, nplayers, nroles) of probabilities
+    """
+    batchsize, nplayers = target.shape
+
+    # count of correct preds per role
+    corrects = np.zeros((N_ROLES,))
+    totals = np.array([ROLES_15_PLAYER[r] for r in ROLE_LIST]) * batchsize
+
+    for batch in range(batchsize):
+        for role_index, role in enumerate(ROLE_LIST):
+            role_count = ROLES_15_PLAYER[role] # number of times this role appears
+            pred_agent_ids = np.argsort(pred[batch,:,role_index])[-role_count:]
+            real_agent_ids = np.where(target[batch] == role_index)[0]
+            for x in pred_agent_ids:
+                if x in real_agent_ids:
+                    corrects[role_index] += 1
+    
+    return corrects / totals
+
+
 best_val_loss = np.inf
 best_epoch = -1
 
@@ -282,12 +327,9 @@ for epoch in range(1000):
     # keep track of game states over the sim
     game_states = np.zeros((ARGS.batchsize, 1, ARGS.n_hidden_units))
 
-    # keep maximum pred for each
-    max_pred_probs = []
-    final_preds = []
-
     # track stats
     game_lens = []
+    final_game_data = None
 
     # choose random agent to play as
     my_agent_id = np.random.randint(N_PLAYERS, size=ARGS.batchsize)+1
@@ -295,7 +337,6 @@ for epoch in range(1000):
     """
     train loop
     """
-
     print("  training...")
     # iterate games 0 through 99
     game_counter = tqdm(range(N_GAMES), ncols=100)
@@ -303,46 +344,22 @@ for epoch in range(1000):
         inputs, targets = build_batch(X, Y, my_agent_id, game)
 
         game_lens.append(inputs["features"].shape[1])
-        # print("  seq len:", inputs["features"].shape[1])
 
         train_loss, outputs = train_step(inputs, targets)
         train_loss = train_loss.numpy()
 
-        # save predictions of final game
-        if game == N_GAMES-1:
-            pred_probs = tf.nn.softmax(outputs["preds"], axis=-1).numpy()
-            pred_probs = np.squeeze(pred_probs)
-            final_pred_probs = pred_probs[:,-1] # result is (batchsize, nplayers, nroles)
-            final_preds.append(np.argmax(final_pred_probs, axis=-1))
-            print("\n", pred_probs.shape)
-            # fill predictions for self with zeros
-            for i,a_id in enumerate(my_agent_id):
-                pred_probs[i,:,a_id-1] = 0
-            max_pred_probs.append(pred_probs.max(axis=(0,1,2)))
-
-
         # show train loss in progress bar
         game_counter.set_postfix({"train loss": train_loss})
+
+        # save predictions of final game
+        if game == N_GAMES-1:
+            final_game_data = (inputs, targets, outputs)
 
         # game_states = np.concatenate() TODO
 
     """
-    show metrics
+    Metrics
     """
-
-    print("  seq lens:")
-    print("    avg:", np.mean(game_lens))
-    print("    max:", np.max(game_lens))
-
-    print("  Max pred probability per role (in final train game):")
-    max_pred_probs = np.max(max_pred_probs, axis=0)
-    print("   ", dict(zip(ROLE_LIST, max_pred_probs)))
-    print("  Num predicted at end of final game for each class:")
-    all_preds = np.concatenate(final_preds)
-    unique, counts = np.unique(all_preds, return_counts=True)
-    roles = [ROLE_LIST[x] for x in unique]
-    print("   ", dict(zip(roles, counts)))
-
     # losses
     val_loss = val_step(VAL_INPUTS, VAL_TARGETS)
     val_loss = val_loss.numpy()
@@ -356,12 +373,49 @@ for epoch in range(1000):
     print("    Val, wholegame:    ", val_wholegame_acc_metric.result().numpy())
     print("    Train, end-of-game:", train_final_acc_metric.result().numpy())
     print("    Val, end-of-game:  ", val_final_acc_metric.result().numpy())
-
-
     train_wholegame_acc_metric.reset_states()
     train_final_acc_metric.reset_states()
     val_wholegame_acc_metric.reset_states()
     val_final_acc_metric.reset_states()
+
+    """
+    Custom metrics
+    """
+    print("  seq lens:")
+    print("    avg:", np.mean(game_lens))
+    print("    max:", np.max(game_lens))
+
+    inputs, targets, outputs = final_game_data
+
+    pred_probs = tf.nn.softmax(outputs["preds"], axis=-1).numpy()
+    pred_probs = np.squeeze(pred_probs) # (batchsize, n_utterances, nplayers, nroles)
+    final_pred_probs = pred_probs[:,-1] # result is (batchsize, nplayers, nroles)
+
+    print("  Total predictions per role (at end of final game):")
+    final_preds = np.argmax(final_pred_probs, axis=-1)
+    unique, counts = np.unique(final_preds, return_counts=True)
+    roles = [ROLE_LIST[x] for x in unique]
+    print("   ", dict(zip(roles, counts)))
+
+    print("  Rolewise accuracies (at end of final game):")
+    roleswise_acc = rolewise_accuracy(targets, final_pred_probs)
+    print("   ", dict(zip(ROLE_LIST, roleswise_acc)))
+
+    print("  Max certainty for others, per role (at end of final game):")
+    # fill self-preds with zeros for max_preds
+    others_pred_probs = np.copy(final_pred_probs)
+    self_corrects = []
+    for i,agent_id in enumerate(my_agent_id):
+        self_pred = np.argmax(final_pred_probs[i,agent_id-1])
+        self_true = targets[i,agent_id-1]
+        self_corrects.append(self_true == self_pred)
+        others_pred_probs[i,agent_id-1] = 0
+    max_pred_probs = others_pred_probs.max(axis=(0,1))
+    print("   ", dict(zip(ROLE_LIST, max_pred_probs)))
+
+    print("  Accuracy of self role prediction (end of final game):")
+    print("   ", np.mean(self_corrects))
+
 
     """
     callbacks
