@@ -4,7 +4,7 @@
 import aiwolfpy
 import aiwolfpy.contentbuilder as cb
 
-from state import GameState, log
+from state import GameState
 
 class ContrarianAgent(object):
     def __init__(self, agent_name):
@@ -19,6 +19,8 @@ class ContrarianAgent(object):
     def initialize(self, base_info, diff_data, game_setting):
         self.game_setting = game_setting
         self.id = base_info['agentIdx']
+        self.role = base_info['myRole']
+        self.state.player_list = list(range(1,game_setting['playerNum']+1))
 
     def update(self, base_info, diff_data, request):
         self.state.update(diff_data, request)
@@ -29,7 +31,6 @@ class ContrarianAgent(object):
     def talk(self):
         try:
             target = self.state.vote_tally().most_common()[-1][0]
-            log(f's: {target}')
             if target and self.my_vote != target:
                 self.my_vote = target
                 return cb.vote(target)
