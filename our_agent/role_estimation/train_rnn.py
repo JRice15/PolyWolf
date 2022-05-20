@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 # model params
 parser.add_argument("--n-hidden-units",type=int,default=512,help="size of each RNN layer")
 parser.add_argument("--n-layers",type=int,default=1,help="number of RNN layers to use")
-parser.add_argument("--rnn-type",choices=["gru","lstm"],default="lstm")
+parser.add_argument("--rnn-type",choices=["gru","lstm"],default="gru")
 parser.add_argument("--batchsize",type=int,default=32)
 
 # loss / hyper params
