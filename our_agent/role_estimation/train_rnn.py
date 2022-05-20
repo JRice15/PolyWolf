@@ -306,6 +306,19 @@ def rolewise_accuracy(target, pred):
     
     return corrects / totals
 
+def votewise_accuracy(target, pred):
+    batchsize, nplayers = target.shape
+
+    correct = 0
+    total = batchsize
+
+    for batch in range(batchsize):
+        role_index = ROLE_LIST.index('WEREWOLF')
+        pred_agent_id = np.argsort(pred[batch,:,role_index])[-1]
+        real_agent_ids = np.where(target[batch] == role_index)[0]
+        if pred_agent_id in real_agent_ids: correct += 1
+
+    return correct / total
 
 best_val_loss = np.inf
 best_epoch = -1
@@ -400,6 +413,10 @@ for epoch in range(1000):
     print("  Rolewise accuracies (at end of final game):")
     roleswise_acc = rolewise_accuracy(targets, final_pred_probs)
     print("   ", dict(zip(ROLE_LIST, roleswise_acc)))
+
+    print("  Votewise accuracy (at end of final game):")
+    votewise_acc = votewise_accuracy(targets, final_pred_probs)
+    print("   ", votewise_acc)
 
     print("  Max certainty for others, per role (at end of final game):")
     # fill self-preds with zeros for max_preds
