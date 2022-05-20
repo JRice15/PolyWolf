@@ -21,6 +21,9 @@ ALL_AGENTS = {
     "Takeda": "java,org.aiwolf.takeda.TakedaRoleAssignPlayer",
     "TOKU": "java,org.aiwolf.TOKU.TOKURoleAssginPlayer",
     "Tomato": "java,com.gmail.toooo1718tyan.Player.RoleAssignPlayer",
+    # "contrarian": f"python,{ROOT}/test/contrarian.py",
+    # "rando": f"python,{ROOT}/test/rando.py",
+    # "sheep": f"python,{ROOT}/test/sheep.py",
     # broken for some reason
     # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }
