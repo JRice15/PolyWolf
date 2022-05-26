@@ -11,14 +11,22 @@ def access_data(frame, *labels):
 
 class GameState:
     def __init__(self):
+        self.day = 0
+        self.games = 0
+        self.roles_counts = {}
         self.player_list = []
+        self.current_living_players = []
+        self.recently_dead_players = []
+        self.night_killed_players = []
+        self.last_attacked_player = -1
+        self.seer_results = {}
+        self.medium_results = {}
         self.votes_current = defaultdict(int)
         self.votes_history = defaultdict(list)
         self.voter_accuracy_village = Counter()
         self.voter_accuracy_wolf = Counter()
         self.votes_total_village = Counter()
         self.votes_total_wolf = Counter()
-        #self.agent_verbosity = Counter()
         try: os.remove('log.txt')
         except: pass
     def get_agent(self, text):
@@ -30,17 +38,46 @@ class GameState:
                     speaker = int(speaker)
                     target = self.get_agent(content)
                     self.votes_current[speaker] = target
-        if request == 'DAILY_INITIALIZE':
+        elif request == 'VOTE':
+            pass
+        elif request == 'WHISPER':
+            pass
+        elif request == 'ATTACK':
+            pass
+        elif request == 'GUARD':
+            pass
+        elif request == 'DIVINE':
+            pass
+        elif request == 'DAILY_INITIALIZE':
+            self.day += 1
+            self.recently_dead_players = []
+            self.last_attacked_player = -1
             actual_votes = {}
-            for type, speaker, content in access_data(diff_data, 'type', 'idx', 'text'):
-                if str(type) != 'vote': continue
-                speaker = int(speaker)
-                target = self.get_agent(content)
-                actual_votes[speaker] = target
+            for type, agent, speaker, content in access_data(diff_data, 'type', 'agent', 'idx', 'text'):
+                if str(type) == 'attack':
+                    self.last_attacked_player = agent
+                if str(type) == 'dead' or str(type) == 'execute':
+                    self.current_living_players.remove(agent)
+                    self.recently_dead_players.append(agent)
+                    if str(type) == 'dead':
+                        self.night_killed_players.append(agent)
+                if str(type) == 'identify':
+                    deceased = self.get_agent(content)
+                    self.medium_results[deceased] = content.split(' ')[-1]
+                if str(type) == 'divine':
+                    scanned = self.get_agent(content)
+                    self.seer_results[scanned] = content.split(' ')[-1]
+                if str(type) == 'vote':
+                    speaker = int(speaker)
+                    target = self.get_agent(content)
+                    actual_votes[speaker] = target
             for voter in actual_votes.keys():
                 self.votes_history[voter].append(actual_votes[voter])
             self.votes_current = {}
-        if request == 'FINISH':
+        elif request == 'DAILY_FINISH':
+            pass
+        elif request == 'FINISH':
+            self.games += 1
             self.werewolves = []
             for flip in access_data(diff_data, 'text'):
                 flip = flip[0]
@@ -57,6 +94,12 @@ class GameState:
                             self.voter_accuracy_wolf[voter] += 1
                         self.votes_total_wolf[voter] += 1
             self.votes_history = defaultdict(list)
+            self.current_living_players = self.player_list.copy()
+            self.seer_results = {}
+            self.medium_results = {}
+            self.night_killed_players = []
+        else:
+            log(request)
     def vote_tally(self):
         return Counter(self.votes_current.values())
     def get_player_accuracy(self,id,werewolf=False):
@@ -64,7 +107,7 @@ class GameState:
             if werewolf: return self.voter_accuracy_wolf[id] / self.votes_total_wolf[id]
             else: return self.voter_accuracy_village[id] / self.votes_total_village[id]
         except ZeroDivisionError:
-            return 0.
+            return None
     def get_prediction_accuracy(self, predictions):
         count = 0
         for prediction in predictions:
