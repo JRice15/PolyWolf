@@ -2,7 +2,6 @@
 # Specify some list of paremters in a policy-space and it will play according to those settings.
 # The goal is that a wide variety of possible rule-based approaches can be contained in the policy-space, and the best one can be searched for algorithmically.
 
-from email.mime import base
 import math
 from collections import defaultdict
 
