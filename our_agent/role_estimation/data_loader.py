@@ -135,8 +135,10 @@ def convert_log_to_df(log_rows, drop_skips=True):
             # actions that should result in multiple rows
             elif action == "execute":
                 execute_row = ["execute", 1, np.nan, parsed_row['target_id']]
-                medium_row = ["medium_result", 0, np.nan, parsed_row["medium_result"]]
-                all_rows += [execute_row, medium_row]
+                all_rows.append(execute_row)
+                if parsed_row["medium_result"] != "ANY":
+                    medium_row = ["medium_result", 0, np.nan, parsed_row["medium_result"]]
+                    all_rows.append(medium_row)
             elif action == "divine":
                 divine_row = ["divine", 1, parsed_row["agent_id"], parsed_row['target_id']]
                 result_row = ["divine_result", 0, np.nan, parsed_row['divine_result']]
