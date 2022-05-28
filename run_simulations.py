@@ -21,9 +21,11 @@ ALL_AGENTS = {
     "Takeda": "java,org.aiwolf.takeda.TakedaRoleAssignPlayer",
     "TOKU": "java,org.aiwolf.TOKU.TOKURoleAssginPlayer",
     "Tomato": "java,com.gmail.toooo1718tyan.Player.RoleAssignPlayer",
-    # "contrarian": f"python,{ROOT}/test/contrarian.py",
-    # "rando": f"python,{ROOT}/test/rando.py",
-    # "sheep": f"python,{ROOT}/test/sheep.py",
+    "contrarian": f"python,{ROOT}/test/contrarian.py",
+    "rando": f"python,{ROOT}/test/rando.py",
+    "estimator_test": f"python,{ROOT}/our_agent/estimator_test.py",
+    "sheep": f"python,{ROOT}/test/sheep.py",
+    "spamton": f"python,{ROOT}/test/spamton.py",
     # broken for some reason
     # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }
@@ -53,11 +55,17 @@ def run_sim(sim_name, ARGS):
 
     # hardcoded agents
     selected_agents = list(ARGS.use)
+    # get roles if specified
+    selected_roles = [a.split("=")[1] if len(a.split("=")) > 1 else None for a in selected_agents]
+    selected_agents = [a.split("=")[0] for a in selected_agents]
     still_needed = ARGS.agents - len(selected_agents)
     # choose n agents
     selected_agents += random.choices(list(ALL_AGENTS.keys()), k=still_needed)
     # format them
     selected_agents = [f"{name}{i},{ALL_AGENTS[name]}" for i,name in enumerate(selected_agents)]
+    for i,role in enumerate(selected_roles):
+        if role is not None:
+            selected_agents[i] = selected_agents[i] + "," + role
     selected_agents_str = "\n".join(selected_agents)
 
     # config file contents

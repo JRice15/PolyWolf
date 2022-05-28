@@ -24,8 +24,9 @@ sys.path.append(AGENT_ROOT)
 from const import ROLES_5_PLAYER, ROLES_15_PLAYER
 
 from role_estimation.data_loader import (N_INPUT_FEATURES, filter_by_role,
-                                         one_hot_encode, read_logs)
-
+                                         one_hot_encode_log_features, read_logs,
+                                         one_hot_encode_role, one_hot_encode_id)
+from role_estimation.rnn_utils import MyConcat
 
 parser = argparse.ArgumentParser()
 # model params
@@ -64,40 +65,23 @@ assert ARGS.reducelr_factor < 1.0
 Build RNN model
 """
 
-
-class MyConcat(layers.Layer):
-    """
-    concatenate a sequence, shape (batchsize, variable timesteps, features),
-    with a vector, shape (batchsize, length)
-    returns:
-        sequence, shape (batchsize, timesteps, features + length)
-    """
-
-    def call(self, x):
-        sequence, vector = x
-        timesteps = tf.shape(sequence)[-2]
-        vec_size = vector.shape[-1]
-        vector = tf.reshape(vector, (-1, 1, vec_size))
-        vector = tf.tile(vector, [1, timesteps, 1])
-        result = tf.concat([sequence, vector], axis=-1)
-        return result
-
-
 def build_model():
     # learns time-dependant features
     def get_rnn_layer(i):
-        layername = "rolepred_" + ARGS.rnn_type + str(i)
+        layername = "recurrent_rolepred_" + ARGS.rnn_type + str(i)
         if ARGS.rnn_type == "gru":
             return layers.GRU(
                     units=ARGS.n_hidden_units,
                     name=layername,
                     return_sequences=True,
+                    return_state=True,
                 )
         elif ARGS.rnn_type == "lstm":
             return layers.LSTM(
                     units=ARGS.n_hidden_units,
                     name=layername,
                     return_sequences=True,
+                    return_state=True,
                 )
 
     # gamestate_rnn = layers.GRU(
@@ -117,6 +101,8 @@ def build_model():
     inpt_role = layers.Input((N_ROLES,), name="my_role")
     # one-hot id encoding
     inpt_id = layers.Input((N_PLAYERS,), name="my_id")
+    # rnn hidden states
+    inpt_states = layers.Input((ARGS.n_layers, ARGS.n_hidden_units), name="rnn_states")
 
     """
     hidden flow
@@ -126,8 +112,17 @@ def build_model():
 
     full_features = layers.Dense(units=ARGS.n_hidden_units, activation="relu", name="all_dense_features")(full_features)
 
+    rnn_states = []
     for i in range(ARGS.n_layers):
-        full_features = get_rnn_layer(i)(full_features)
+        # for now, just throw away the rnn state
+        full_features, state = get_rnn_layer(i)(full_features, initial_state=inpt_states[:,i])
+        # add dim
+        state = layers.Reshape((1,-1))(state)
+        rnn_states.append(state)
+    if len(rnn_states) > 1:
+        rnn_states = layers.Concatenate(axis=1)(rnn_states) # stack along added dim
+    else:
+        rnn_states = rnn_states[0]
 
     full_features = MyConcat()([full_features, one_d_features])
     # add a dimension
@@ -151,11 +146,13 @@ def build_model():
                     inpt_features, 
                     inpt_role, 
                     inpt_id,
+                    inpt_states,
                     # inpt_previous_states
                 ], 
                 {
                     "preds": agent_preds,
                     "game_features": full_features,
+                    "rnn_states": rnn_states
                 }
             )
     return model
@@ -198,32 +195,32 @@ def build_batch(X, Y, my_agent_ids, game, batchsize=ARGS.batchsize):
         # get ground-truth roles
         roles_df = Y[batch_index].loc[game]
         # print(y_batch)
-        batch_targets.append(roles_df.apply(lambda x: ROLE_LIST.index(x)).to_numpy())
+        batch_targets.append(roles_df.apply(lambda x: ROLE_LIST.index(x)))
 
         # get agent id
         my_id = my_agent_ids[batch_index]
-        my_id_onehot = tf.one_hot(my_id-1, depth=N_PLAYERS).numpy()
-        batch_my_ids.append(my_id_onehot)
+        batch_my_ids.append( one_hot_encode_id(my_id, n_players=N_PLAYERS) )
 
         # get role
         my_role = roles_df[my_id]
-        my_role_onehot = tf.one_hot(ROLE_LIST.index(my_role), depth=N_ROLES).numpy()
-        batch_my_roles.append(my_role_onehot)
+        batch_my_roles.append( one_hot_encode_role(my_role, n_players=N_PLAYERS) )
 
         # get X features
         df = X[batch_index].loc[game]
         df = filter_by_role(df, my_role)
-        arr = one_hot_encode(df)
+        arr = one_hot_encode_log_features(df)
         batch_features.append(arr)
 
     batch_features = pad_sequences(batch_features, dtype=K.floatx())
-    batch_my_roles = tf.constant(batch_my_roles)
-    batch_my_ids = tf.constant(batch_my_ids)
+    batch_my_roles = tf.stack(batch_my_roles)
+    batch_my_ids = tf.stack(batch_my_ids)
 
     inputs = {
         "features": batch_features,
         "my_role": batch_my_roles,
         "my_id": batch_my_ids,
+        # initialize rnns with zeros
+        "rnn_states": tf.zeros((batchsize, ARGS.n_layers, ARGS.n_hidden_units))
     }
 
     batch_targets = tf.constant(batch_targets)
