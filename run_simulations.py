@@ -23,9 +23,9 @@ ALL_AGENTS = {
     "Tomato": "java,com.gmail.toooo1718tyan.Player.RoleAssignPlayer",
     "contrarian": f"python,{ROOT}/test/contrarian.py",
     "rando": f"python,{ROOT}/test/rando.py",
-    "estimator_test": f"python,{ROOT}/our_agent/estimator_test.py",
     "sheep": f"python,{ROOT}/test/sheep.py",
     "spamton": f"python,{ROOT}/test/spamton.py",
+    "estimator_demo": f"python,{ROOT}/our_agent/rnn_estimator_demo.py",
     # broken for some reason
     # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }
