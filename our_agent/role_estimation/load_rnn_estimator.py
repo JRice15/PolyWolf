@@ -6,6 +6,7 @@ import time
 import logging
 import argparse
 from pprint import pprint
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -96,22 +97,58 @@ def parse_diff_data(diff_data):
 
 
 
-
 class RoleEstimatorRNN():
 
     def __init__(self):
         self.model = tf.keras.models.load_model(
-                f"{AGENT_ROOT}/role_estimation/model.h5",
+                f"{AGENT_ROOT}/role_estimation/pretrained_model.h5",
                 custom_objects={"MyConcat": MyConcat})
-        self.latest_predictions = None
         self.my_agent_id = None
         self.my_role = None
+        self.game_num = 1
 
-        self.initialize_game_start()
+        self.latest_predictions = None
+        self.rolewise_accs = defaultdict(lambda: defaultdict(lambda: [])) # dict maps role to dict mapping day to list of accuracies
+        self.agentwise_accs = defaultdict(lambda: defaultdict(lambda: [])) # dict maps agentid to dict mapping day to list of accuracies
 
-    def initialize_game_start(self):
+        self.game_start()
+
+    def game_start(self):
+        # preds at end of each day
+        self.day_end_preds = []
         # rnn states for the game (with batchsize of 1)
         self.rnn_states = tf.zeros((1,) + self.model.get_layer("rnn_states").output.shape[1:])
+
+    def game_end(self, diff_data):
+        logging.info(f"{self.my_agent_id}, {self.my_role}")
+        real_roles = diff_data["text"].apply(lambda x: x.split()[-1])
+        real_roles.index = diff_data["agent"]
+        for day,pred_df in enumerate(self.day_end_preds):
+            if pred_df is None:
+                continue
+            # role-wise
+            for role,count in ROLES_15_PLAYER.items():
+                preds = pred_df[role].nlargest(n=count).index
+                real = real_roles[real_roles == role].index
+                acc = np.mean([x in real for x in preds])
+                self.rolewise_accs[role][day].append(acc)
+            # agent-wise
+            for agent in real_roles.index:
+                pred = pred_df.columns[pred_df.loc[agent].argmax()]
+                true = real_roles.loc[agent]
+                self.agentwise_accs[agent][day].append(pred == true)
+        # display
+        logging.info(f"\nGame {self.game_num} accuracies:")
+        logging.info(f"per role:")
+        rolewise_df = pd.DataFrame(self.rolewise_accs).applymap(np.mean).sort_index()
+        rolewise_df.index.name = "day"
+        logging.info("\n" + str(rolewise_df))
+        logging.info(f"per agent:")
+        agentwise_df = pd.DataFrame(self.agentwise_accs).applymap(np.mean).sort_index()
+        agentwise_df.index.name = "day"
+        logging.info("\n" + str(agentwise_df))
+
+        self.game_num += 1
 
     
     def update_and_predict(self, *, base_info, diff_data, request):
@@ -119,9 +156,10 @@ class RoleEstimatorRNN():
         self.my_role = base_info["myRole"]
 
         if (request == "FINISH"):
-            self.initialize_game_start()
+            self.game_end(diff_data)
+            self.game_start()
             return self.latest_predictions
-        
+
         if len(diff_data):
             diff_data = parse_diff_data(diff_data)
 
@@ -143,7 +181,10 @@ class RoleEstimatorRNN():
                 self.rnn_states = outputs["rnn_states"]
                 preds = outputs["preds"][0,-1].numpy() # select first (only) batch, and last step for most up-to-date predictions predictions
 
-                preds = pd.DataFrame(preds, columns=ROLE_LIST_15, index=range(1,16))
+                self.latest_predictions = pd.DataFrame(preds, columns=ROLE_LIST_15, index=range(1,16))
+
+        if request == "DAILY_FINISH":
+            self.day_end_preds.append(self.latest_predictions)
 
         return self.latest_predictions
 
