@@ -2,6 +2,7 @@ import argparse
 import glob
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -51,6 +52,7 @@ CLASSPATH = ":".join([x for x in CLASSPATH if len(x)])
 
 
 def run_sim(sim_name, ARGS):
+    sim_name = re.sub(r":", "-", sim_name)
     os.makedirs(f"sims/{sim_name}", exist_ok=True)
 
     # hardcoded agents

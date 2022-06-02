@@ -13,3 +13,9 @@ You can connect this sample agent to the server as follows,
 ```
 python start.py -h locahost -p 10000 -n name_you_like
 ```
+## Troubleshooting
+If you get the error 
+```
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+```
+Make sure you have the line `127.0.0.1	localhost` in your `/etc/hosts` and change the line `self.sock.connect((self.host, self.port))` to `self.sock.connect(('localhost', self.port))`
