@@ -22,11 +22,13 @@ ALL_AGENTS = {
     "Takeda": "java,org.aiwolf.takeda.TakedaRoleAssignPlayer",
     "TOKU": "java,org.aiwolf.TOKU.TOKURoleAssginPlayer",
     "Tomato": "java,com.gmail.toooo1718tyan.Player.RoleAssignPlayer",
-    "contrarian": f"python,{ROOT}/test/contrarian.py",
-    "rando": f"python,{ROOT}/test/rando.py",
-    "sheep": f"python,{ROOT}/test/sheep.py",
-    "spamton": f"python,{ROOT}/test/spamton.py",
-    "estimator_demo": f"python,{ROOT}/our_agent/rnn_estimator_demo.py",
+    "contrarian": f"python,{ROOT}/our_agent/test/contrarian.py",
+    "frank": f"python,{ROOT}/our_agent/test/frank.py",
+    "neural": f"python,{ROOT}/our_agent/test/neural_test.py",
+    # "policy": f"python,{ROOT}/our_agent/test/policywolf.py",
+    "rando": f"python,{ROOT}/our_agent/test/rando.py",
+    "sheep": f"python,{ROOT}/our_agent/test/sheep.py",
+    "spamton": f"python,{ROOT}/our_agent/test/spamton.py",
     # broken for some reason
     # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }
