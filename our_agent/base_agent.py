@@ -9,6 +9,7 @@ class Agent(object):
     def __init__(self, agent_name):
         self.state = GameState()
         self.name = agent_name
+        self.target = -1
 
     def getName(self):
         return self.name

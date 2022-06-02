@@ -1,4 +1,11 @@
+# When town-aligned, agent always votes for the (currently living) player the neural network predicts is most likely to be a werewolf.
+# Otherwise takes random actions and does not communicate beyond stating its intended vote.
+
 import numpy as np
+
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) # Because python relative imports are unfathomably garbage.
 
 import aiwolfpy
 from aiwolfpy import contentbuilder as cb
@@ -6,15 +13,13 @@ from base_agent import Agent
 
 from role_estimation.load_rnn_estimator import RoleEstimatorRNN
 
-class PolyWolf(Agent):
+class NeuralAgent(Agent):
     def __init__(self, agent_name):
         super().__init__(agent_name)
         self.my_vote = -1
-        self.target = -1
+        self.spoke = False
         self.role_estimator = RoleEstimatorRNN()
         self.predictions = None
-        self.probabilities = None
-        self.agendas = []
 
     def update(self, base_info, diff_data, request):
         self.predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
@@ -26,9 +31,6 @@ class PolyWolf(Agent):
                 row /= sum(row)
         else: self.predictions = None
         super().update(base_info, diff_data, request)
-        if request == 'DAILY_INITIALIZE':
-            if self.role == 'BODYGUARD' and self.state.day > 1 and max(self.state.murdered_players.values()) != self.state.day:
-                self.state.confirmed[self.target] = 'HUMAN'
 
     def choose_vote(self):
         if self.role != 'WEREWOLF' and self.role != 'POSSESSED':
@@ -50,7 +52,7 @@ class PolyWolf(Agent):
     def vote(self):
         return self.choose_vote()
 
-agent = PolyWolf('PolyWolf')
+agent = NeuralAgent('neural')
 
 if __name__ == '__main__':
     aiwolfpy.connect_parse(agent)

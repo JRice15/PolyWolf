@@ -1,8 +1,11 @@
 # Agent behaves completely randomly and communicates the minimum possible amount with the server or the other agents.
 
-import aiwolfpy
-import aiwolfpy.contentbuilder as cb
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) # Because python relative imports are unfathomably garbage.
 
+import aiwolfpy
+from aiwolfpy import contentbuilder as cb
 from base_agent import Agent
 
 class RandomAgent(Agent):

@@ -1,34 +1,26 @@
-import os
 from collections import Counter, defaultdict
-
-def log(string):
-    with open('log.txt','a') as outfile:
-        outfile.write(string)
-        outfile.write('\n')
 
 def access_data(frame, *labels):
     return zip(*[frame[label].values for label in labels])
 
+# A record of the game state, from the perspective of a single agent.
 class GameState:
     def __init__(self):
         self.day = 0
         self.games = 0
-        self.roles_counts = {}
+        self.roles_counts = {} # dict of {role name : count}
         self.player_list = []
-        self.current_living_players = []
-        self.recently_dead_players = []
-        self.night_killed_players = []
+        self.current_living_players = [] # list of player ids
+        self.executed_players = {} # dict of {player id : day of demise}
+        self.murdered_players = {}
         self.last_attacked_player = -1
-        self.seer_results = {}
-        self.medium_results = {}
-        self.votes_current = defaultdict(int)
-        self.votes_history = defaultdict(list)
-        self.voter_accuracy_village = Counter()
-        self.voter_accuracy_wolf = Counter()
-        self.votes_total_village = Counter()
-        self.votes_total_wolf = Counter()
-        try: os.remove('log.txt')
-        except: pass
+        self.confirmed = {} # dict of {player id : species}
+        self.votes_current = {} # dict of {voter id : target id}
+        self.votes_history = defaultdict(list) # dict of {voter id : [target ids list]}
+        self.voter_accuracy_good = Counter()
+        self.voter_accuracy_evil = Counter()
+        self.votes_total_good = Counter()
+        self.votes_total_evil = Counter()
     def get_agent(self, text):
         return int(text.split('[')[1].split(']')[0])
     def update(self, diff_data, request):
@@ -50,24 +42,23 @@ class GameState:
             pass
         elif request == 'DAILY_INITIALIZE':
             self.day += 1
-            self.recently_dead_players = []
             self.last_attacked_player = -1
             actual_votes = {}
-            for type, agent, speaker, content in access_data(diff_data, 'type', 'agent', 'idx', 'text'):
-                if str(type) == 'attack':
+            for event, agent, speaker, content in access_data(diff_data, 'type', 'agent', 'idx', 'text'):
+                event = str(event)
+                if event == 'attack':
                     self.last_attacked_player = agent
-                if str(type) == 'dead' or str(type) == 'execute':
+                if event == 'dead' or event == 'execute':
                     self.current_living_players.remove(agent)
-                    self.recently_dead_players.append(agent)
-                    if str(type) == 'dead':
-                        self.night_killed_players.append(agent)
-                if str(type) == 'identify':
+                    if event == 'dead': self.murdered_players[agent] = self.day
+                    if event == 'execute': self.executed_players[agent] = self.day
+                if event == 'identify':
                     deceased = self.get_agent(content)
-                    self.medium_results[deceased] = content.split(' ')[-1]
-                if str(type) == 'divine':
+                    self.confirmed[deceased] = content.split(' ')[-1]
+                if event == 'divine':
                     scanned = self.get_agent(content)
-                    self.seer_results[scanned] = content.split(' ')[-1]
-                if str(type) == 'vote':
+                    self.confirmed[scanned] = content.split(' ')[-1]
+                if event == 'vote':
                     speaker = int(speaker)
                     target = self.get_agent(content)
                     actual_votes[speaker] = target
@@ -78,28 +69,29 @@ class GameState:
             pass
         elif request == 'FINISH':
             self.games += 1
-            self.werewolves = []
+            self.evils = []
             for flip in access_data(diff_data, 'text'):
                 flip = flip[0]
                 if flip.endswith('WEREWOLF') or flip.endswith('POSSESSED'):
-                    self.werewolves.append(self.get_agent(flip))
+                    self.evils.append(self.get_agent(flip))
             for voter in self.votes_history:
                 for vote in self.votes_history[voter]:
-                    if voter not in self.werewolves:
-                        if vote in self.werewolves:
-                            self.voter_accuracy_village[voter] += 1
-                        self.votes_total_village[voter] += 1
+                    if voter not in self.evils:
+                        if vote in self.evils:
+                            self.voter_accuracy_good[voter] += 1
+                        self.votes_total_good[voter] += 1
                     else:
-                        if vote in self.werewolves:
-                            self.voter_accuracy_wolf[voter] += 1
-                        self.votes_total_wolf[voter] += 1
+                        if vote in self.evils:
+                            self.voter_accuracy_evil[voter] += 1
+                        self.votes_total_evil[voter] += 1
             self.votes_history = defaultdict(list)
             self.current_living_players = self.player_list.copy()
-            self.seer_results = {}
-            self.medium_results = {}
-            self.night_killed_players = []
+            self.executed_players = {}
+            self.murdered_players = {}
+            self.confirmed = {}
+            self.day = 0
         else:
-            log(request)
+            raise RuntimeError
     def vote_tally(self):
         return Counter(self.votes_current.values())
     def get_player_accuracy(self,id,werewolf=False):

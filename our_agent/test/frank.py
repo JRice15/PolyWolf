@@ -3,9 +3,12 @@
 
 import random
 
-import aiwolfpy
-import aiwolfpy.contentbuilder as cb
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..')) # Because python relative imports are unfathomably garbage.
 
+import aiwolfpy
+from aiwolfpy import contentbuilder as cb
 from base_agent import Agent
 
 class FrankAgent(Agent):
@@ -22,7 +25,7 @@ class FrankAgent(Agent):
     def divine(self): # A smarter agent would presumably at least avoid scanning someone who is about to get voted off, but this is not that agent.
         valid_targets = self.state.current_living_players.copy()
         valid_targets.remove(self.id)
-        for previously_scanned in self.state.seer_results.keys():
+        for previously_scanned in self.state.confirmed.keys():
             if previously_scanned in valid_targets:
                 valid_targets.remove(previously_scanned)
         self.target = random.choice(valid_targets)
@@ -34,14 +37,15 @@ class FrankAgent(Agent):
         if not self.shared:
             self.shared = True
             if self.role == 'MEDIUM':
-                for dead in self.state.recently_dead_players:
-                    if dead in self.state.medium_results.keys():
-                        return cb.identified(dead,self.state.medium_results[dead])
+                for dead in self.state.executed_players:
+                    if self.state.executed_players[dead] == self.state.day:
+                        if dead in self.state.confirmed.keys():
+                            return cb.identified(dead,self.state.confirmed[dead])
             elif self.role == 'BODYGUARD':
                 return cb.guarded(self.target)
             elif self.role == 'SEER':
-                if self.target in self.state.seer_results.keys():
-                    return cb.divined(self.target, self.state.seer_results[self.target])
+                if self.target in self.state.confirmed.keys():
+                    return cb.divined(self.target, self.state.confirmed[self.target])
             elif self.role == 'WEREWOLF':
                 return cb.guarded(self.state.last_attacked_player).replace('GUARDED','ATTACKED')
         return cb.over()
