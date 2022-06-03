@@ -97,7 +97,7 @@ class Dissent(Agenda):
         self.name = 'dissent'
     def vote(self, state):
         tally = state.vote_tally()
-        return {id:0 if tally[id] > 0 else id:1 for id in state.currently_living_players}
+        return {id:0 if tally[id] > 0 else 1 for id in state.currently_living_players}
 
 # Push to take action against players that have a high win rate in past games on the opposite team as yours.
 class Fear(Agenda):
@@ -105,7 +105,7 @@ class Fear(Agenda):
         self.name = 'fear'
     def vote(self, state):
         tally = state.vote_tally()
-        return {id:0 if tally[id] > 0 else id:1 for id in state.currently_living_players}
+        return {id:0 if tally[id] > 0 else 1 for id in state.currently_living_players}
 
 # Push to take action on behalf of players that have a high win rate in past games on the same team as yours.
 class Elitism(Agenda):
@@ -113,7 +113,7 @@ class Elitism(Agenda):
         self.name = 'elitism'
     def vote(self, state):
         tally = state.vote_tally()
-        return {id:0 if tally[id] > 0 else id:1 for id in state.currently_living_players}
+        return {id:0 if tally[id] > 0 else 1 for id in state.currently_living_players}
 
 class PolicyAgent(Agent):
     def __init__(self, agent_name, policy):
