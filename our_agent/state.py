@@ -96,13 +96,13 @@ class GameState:
         return Counter(self.votes_current.values())
     def get_player_accuracy(self,id,werewolf=False):
         try:
-            if werewolf: return self.voter_accuracy_wolf[id] / self.votes_total_wolf[id]
-            else: return self.voter_accuracy_village[id] / self.votes_total_village[id]
+            if werewolf: return self.voter_accuracy_evil[id] / self.votes_total_evil[id]
+            else: return self.voter_accuracy_good[id] / self.votes_total_good[id]
         except ZeroDivisionError:
             return None
     def get_prediction_accuracy(self, predictions):
         count = 0
         for prediction in predictions:
-            if prediction in self.werewolves:
+            if prediction in self.evils:
                 count += 1
         return count
