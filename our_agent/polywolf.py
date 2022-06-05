@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from collections import defaultdict
 
@@ -6,16 +7,18 @@ from aiwolfpy import contentbuilder as cb
 
 from base_agent import Agent
 from probability import Estimator
+import logger
 
 from policies.analysis import Analysis
 from policies.fake_analysis import FakeAnalysis
 from policies.dissent import Dissent
 from policies.pragmatism import Pragmatism
+from policies.fear import Fear
 from policies.prioritize_seer import SeerPriority
 from policies.prioritize_medium import MediumPriority
 from policies.prioritize_bodyguard import BodyguardPriority
 
-policies = [Analysis, FakeAnalysis, Dissent, Pragmatism, SeerPriority, MediumPriority, BodyguardPriority]
+policies = [Analysis, FakeAnalysis, Dissent, Pragmatism, Fear, SeerPriority, MediumPriority, BodyguardPriority]
 
 class PolyWolf(Agent):
     def __init__(self, agent_name):
@@ -37,7 +40,7 @@ class PolyWolf(Agent):
             proposals = getattr(agenda, request)()
             if proposals == None: continue
             for proposal in proposals:
-                policy_values[proposal] += proposals[proposal] * agenda.weights[request]
+                policy_values[proposal] += proposals[proposal] * agenda.weights[request] # TODO: Normalize this properly, so the weights make more sense.
         if policy_values:
             return max(policy_values, key=policy_values.get)
         return None
@@ -76,7 +79,8 @@ class PolyWolf(Agent):
         if target: return target
         return self.id
 
-agent = PolyWolf('PolyWolf')
+idx = logger.reserve_id()
+agent = PolyWolf(f'PolyWolf-{idx}')
 
 if __name__ == '__main__':
     aiwolfpy.connect_parse(agent)

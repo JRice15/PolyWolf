@@ -1,7 +1,5 @@
 from collections import Counter, defaultdict
 
-from logger import log
-
 def access_data(frame, *labels):
     return zip(*[frame[label].values for label in labels])
 
@@ -83,15 +81,26 @@ class GameState:
         elif request == 'DAILY_FINISH':
             pass
         elif request == 'FINISH':
-            log(diff_data)
             self.games += 1
             self.evils = []
+            town_wins = True
             for flip in access_data(diff_data, 'text'):
                 flip = flip[0]
                 if flip.endswith('WEREWOLF') or flip.endswith('POSSESSED'):
                     self.evils.append(self.get_agent(flip))
                 if not flip.endswith('WEREWOLF'):
                     self.human_games_played[self.get_agent(flip)] += 1
+                elif self.get_agent(flip) in self.current_living_players:
+                    town_wins = False
+            for player in self.player_list:
+                if player in self.evils:
+                    self.games_evil[player] += 1
+                    if not town_wins:
+                        self.wins_evil[player] += 1
+                else:
+                    self.games_good[player] += 1
+                    if town_wins:
+                        self.wins_good += 1
             for voter in self.votes_history:
                 for vote in self.votes_history[voter]:
                     if voter not in self.evils:
