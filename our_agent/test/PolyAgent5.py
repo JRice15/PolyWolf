@@ -36,9 +36,16 @@ class PolyAgent5(Agent):
         self.fake_seers = set()
         self.initial_fake_seers = set()
         self.divined = []
+        self.divined_nums = []
         self.divined_wolf = -1
         self.claimed_target = -1
         self.real_target = -1
+        self.competing_seers = set()
+        self.claimed_werewolf = set()
+
+        #WEREWOLF properties
+        self.claimed_possessed = set()
+        self.enemy = -1
         
     def check_alive(self):
         result = []
@@ -54,6 +61,7 @@ class PolyAgent5(Agent):
         self.diff_data = diff_data
         self.check_alive()
         self.fake_seers = self.fake_seers & set(self.others_living)
+        self.competing_seers = self.competing_seers & set(self.others_living)
 
         #NN Stuff
         self.predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
@@ -75,20 +83,40 @@ class PolyAgent5(Agent):
                         agent_claiming_seer = int(diff_data["text"][i].split()[1][6:8])
                         if (self.myrole == "SEER") and (agent_claiming_seer != self.myid):
                             self.fake_seers.add(int(diff_data["text"][i].split()[1][6:8]))
+                        if (agent_claiming_seer != self.myid):
+                            self.competing_seers.add(int(diff_data["text"][i].split()[1][6:8]))
+                    if ("COMINGOUT" and "POSSESSED") in diff_data["text"][i]: 
+                        agent_claiming_possessed = int(diff_data["text"][i].split()[1][6:8])
+                        if (agent_claiming_possessed != self.myid):
+                            self.claimed_possessed.add(int(diff_data["text"][i].split()[1][6:8]))
+                    if ("COMINGOUT" and "WEREWOLF") in diff_data["text"][i]: 
+                        agent_claiming_werewolf = int(diff_data["text"][i].split()[1][6:8])
+                        if (agent_claiming_werewolf != self.myid):
+                            self.claimed_werewolf.add(int(diff_data["text"][i].split()[1][6:8]))
+                    if ("DIVINED" and "WEREWOLF") in diff_data["text"][i]: 
+                        print("Check diff_data")
+                        print(diff_data)
+                        agent_accusing = int(diff_data["agent"][i])
+                        agent_accused = int(diff_data["text"][i].split()[1][6:8])
+                        if (self.myrole == "WEREWOLF") and (agent_accused == self.myid):
+                            self.enemy = agent_accusing
+                            print("agent", agent_accusing, "accused me")
 
         if request == "DAILY_INITIALIZE":
             for i in range(diff_data.shape[0]):
                 if diff_data["type"][i] == "divine":
                     self.divined.append(diff_data["text"][i])
+                    self.divined_nums.append(int(self.divined[-1].split()[1][6:8]))
                     if self.divined[-1].split()[2] == "WEREWOLF":
                         self.divined_wolf = int(self.divined[-1].split()[1][6:8])
 
     def choose_vote(self):
-        if self.role != 'WEREWOLF' and self.role != 'POSSESSED':
+        if self.myrole != 'WEREWOLF' and self.myrole != 'POSSESSED':
             if type(self.predictions) != type(None):
                 suspicions = self.predictions[:,-1]
                 for i, _ in enumerate(suspicions):
-                    if i not in self.state.current_living_players: suspicions[i] = -1
+                    if i not in self.others_living: suspicions[i] = -1
+                print("suspicions\n", suspicions)
                 id = np.argmax(suspicions)
                 return int(id)
         return self.id
@@ -110,6 +138,9 @@ class PolyAgent5(Agent):
                 if self.talk_turn == 2:
                     print("SEER day 1 turn 2")
                     self.initial_fake_seers.update(self.fake_seers)
+                    if (len(self.fake_seers) == 2) and (len((self.fake_seers - set(self.divined_nums))) == 1):
+                        if self.divined_wolf == -1:
+                            self.divined_wolf = (self.fake_seers - set(self.divined_nums)).pop()
                     if self.divined_wolf != -1:
                         self.claimed_target = self.divined_wolf
                         return cb.divined(self.divined_wolf, "WEREWOLF")
@@ -120,7 +151,7 @@ class PolyAgent5(Agent):
                             return cb.divined(self.claimed_target, "WEREWOLF")
                         else:
                             # pick a random target that is not confirmed human
-                            self.claimed_target = random.choice(list(set(self.others_living) - set(self.divined)))
+                            self.claimed_target = random.choice(list(set(self.others_living) - set(self.divined_nums)))
                             return cb.divined(self.claimed_target, "WEREWOLF")
 
             if self.day == 2:
@@ -159,6 +190,89 @@ class PolyAgent5(Agent):
                             self.claimed_target = self.divined_wolf
                             return cb.divined(self.divined_wolf, "WEREWOLF")
 
+        if self.myrole == 'WEREWOLF':
+            if self.talk_turn > 2 and self.talk_turn < 13:
+                if self.enemy != -1:
+                    return cb.vote(self.enemy)
+                return cb.vote(self.claimed_target)
+            if self.talk_turn >= 13:
+                return "Over"
+
+            if self.day == 1:
+                print("WEREWOLF day 1")
+                if self.talk_turn == 1:
+                    return cb.comingout(self.myid, "SEER")
+                if self.talk_turn == 2:
+                    print("WEREWOLF day 1 turn 2")
+                    if len(self.competing_seers) > 0:
+                        self.claimed_target = random.choice(list(self.competing_seers))
+                        return cb.divined(self.claimed_target, "WEREWOLF")
+                    else:
+                        # pick a random target
+                        self.claimed_target = random.choice(list(set(self.others_living)))
+                        return cb.divined(self.claimed_target, "WEREWOLF")
+
+            if self.day == 2:
+                print("WEREWOLF day 2")
+                if self.talk_turn == 1:
+                    if len(self.competing_seers) == 0:
+                        return cb.comingout(self.myid, "WEREWOLF")
+                    else:
+                        return cb.comingout(self.myid, "WEREWOLF")
+                        
+                if self.talk_turn == 2:
+                    if len(self.competing_seers) == 0:
+                        if len(self.claimed_possessed) < 2:
+                            self.claimed_target = random.choice(list(set(self.others_living) - self.claimed_possessed))
+                        else:
+                            self.claimed_target = random.choice(self.others_living)
+                        print("Claimed WEREWOLF")
+                        return cb.vote(self.claimed_target)
+                    else:
+                        print("Claiming SEER")
+                        if len(self.competing_seers) == 1:
+                            self.claimed_target = self.competing_seers.pop()
+                            return cb.divined(self.claimed_target, "WEREWOLF")
+                        else:
+                            print("Two competing seers")
+                            self.claimed_target = random.choice(self.others_living)
+                        return cb.vote(self.claimed_target)
+
+        if self.myrole == 'VILLAGER':
+            if self.day == 1:
+                print("VILLAGER day 1")
+                if self.talk_turn > 4:
+                    return cb.over()
+                return cb.vote(self.choose_vote())
+            if self.day == 2:
+                print("VILLAGER day 2")
+                if self.talk_turn == 1:
+                    if self.competing_seers == 1:
+                        print("villager tricking seer wolf")
+                        self.real_target = self.competing_seers.pop()
+                        self.claimed_target = (set(self.others_living) - {self.real_target}).pop()
+                        return cb.comingout(self.myid, "POSSESSED")
+                    else:
+                        print("two competing seers")
+                        return cb.comingout(self.myid, "POSSESSED")
+                elif self.talk_turn == 2:
+                    if len(self.claimed_possessed) > 0:
+                        print("competing possessed")
+                        self.claimed_target = random.choice(self.others_living)
+                        return cb.comingout(self.myid, "WEREWOLF")
+                    self.real_target = self.choose_vote()
+                    self.claimed_target = (set(self.others_living) - {self.real_target}).pop()
+                    return cb.vote(self.claimed_target)
+                else:
+                    if self.talk_turn >= 6:
+                        print("turn", self.talk_turn)
+                        print("NN choice", self.choose_vote())
+                        return cb.over()
+                    if self.claimed_target != -1:
+                        return cb.vote(self.claimed_target)
+                    
+
+
         target = self.choose_vote()
         if target and self.my_vote != target:
             self.my_vote = target
@@ -171,10 +285,26 @@ class PolyAgent5(Agent):
                 return self.real_target
             else:
                 return self.claimed_target
+        elif self.myrole == "WEREWOLF":
+            if self.enemy != -1:
+                return self.enemy
+            return self.claimed_target
+        elif self.myrole == "VILLAGER":
+            if self.real_target != -1:
+                return self.real_target
+            elif self.claimed_target != -1:
+                return self.claimed_target
         return self.choose_vote()
 
     def divine(self):
-        return random.choice(list(set(self.others_living)-set(self.divined)))
+        if len(self.others_living) <= len(self.divined_nums):
+            return random.choice(self.others_living)
+        return random.choice(list(set(self.others_living)-set(self.divined_nums)))
+
+    def attack(self):
+            if len(self.others_living) == len(self.competing_seers):
+                return random.choice(self.others_living)
+            return random.choice(list(set(self.others_living) - self.competing_seers))
 
     def dayStart(self):
         self.talk_turn = 0
