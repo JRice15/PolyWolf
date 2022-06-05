@@ -21,6 +21,8 @@ class Agent(object):
         self.state.player_list = list(range(1,game_setting['playerNum']+1))
         self.state.current_living_players = self.state.player_list.copy()
         self.state.roles_counts = game_setting['roleNumMap']
+        if self.role == 'WEREWOLF':
+            self.state.confirmed = base_info['roleMap'].copy()
 
     def update(self, base_info, diff_data, request):
         self.state.update(diff_data, request)

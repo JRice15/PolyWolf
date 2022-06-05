@@ -1,5 +1,7 @@
 from collections import Counter, defaultdict
 
+from logger import log
+
 def access_data(frame, *labels):
     return zip(*[frame[label].values for label in labels])
 
@@ -8,19 +10,29 @@ class GameState:
     def __init__(self):
         self.day = 0
         self.games = 0
-        self.roles_counts = {} # dict of {role name : count}
+        self.roles_counts = {}                  # dict of {role name : count}
         self.player_list = []
-        self.current_living_players = [] # list of player ids
-        self.executed_players = {} # dict of {player id : day of demise}
+        self.current_living_players = []        # list of player ids
+        self.executed_players = {}              # dict of {player id : day of demise}
         self.murdered_players = {}
         self.last_attacked_player = -1
-        self.confirmed = {} # dict of {player id : species}
-        self.votes_current = {} # dict of {voter id : target id}
-        self.votes_history = defaultdict(list) # dict of {voter id : [target ids list]}
+        self.confirmed = {}                     # dict of {player id : species}
+        self.votes_current = {}                 # dict of {voter id : target id}
+        self.votes_history = defaultdict(list)  # dict of {voter id : [target ids list]}
+        # Tracking the rate other agents voted for werewolves / possessed.
         self.voter_accuracy_good = Counter()
         self.voter_accuracy_evil = Counter()
         self.votes_total_good = Counter()
         self.votes_total_evil = Counter()
+        # Tracking the rate other agents have won, based on alignment.
+        self.wins_good = Counter()
+        self.wins_evil = Counter()
+        self.games_good = Counter()
+        self.games_evil = Counter()
+        # Tracking how often other agents die under various circumstances.
+        self.lifespans = defaultdict(list)
+        self.killed_count = Counter()
+        self.human_games_played = Counter()
     def get_agent(self, text):
         return int(text.split('[')[1].split(']')[0])
     def update(self, diff_data, request):
@@ -50,7 +62,10 @@ class GameState:
                     self.last_attacked_player = agent
                 if event == 'dead' or event == 'execute':
                     self.current_living_players.remove(agent)
-                    if event == 'dead': self.murdered_players[agent] = self.day
+                    self.lifespans[agent].append(self.day)
+                    if event == 'dead':
+                        self.murdered_players[agent] = self.day
+                        self.killed_count[agent] += 1
                     if event == 'execute': self.executed_players[agent] = self.day
                 if event == 'identify':
                     deceased = self.get_agent(content)
@@ -68,12 +83,15 @@ class GameState:
         elif request == 'DAILY_FINISH':
             pass
         elif request == 'FINISH':
+            log(diff_data)
             self.games += 1
             self.evils = []
             for flip in access_data(diff_data, 'text'):
                 flip = flip[0]
                 if flip.endswith('WEREWOLF') or flip.endswith('POSSESSED'):
                     self.evils.append(self.get_agent(flip))
+                if not flip.endswith('WEREWOLF'):
+                    self.human_games_played[self.get_agent(flip)] += 1
             for voter in self.votes_history:
                 for vote in self.votes_history[voter]:
                     if voter not in self.evils:
@@ -85,6 +103,8 @@ class GameState:
                             self.voter_accuracy_evil[voter] += 1
                         self.votes_total_evil[voter] += 1
             self.votes_history = defaultdict(list)
+            for player_id in self.current_living_players:
+                self.lifespans[player_id].append(self.day+1)
             self.current_living_players = self.player_list.copy()
             self.executed_players = {}
             self.murdered_players = {}
