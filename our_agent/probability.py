@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 
 from role_estimation.load_rnn_estimator import RoleEstimatorRNN
-from logger import log
+import logger
 
 class Estimator:
     def __init__(self, agent):
@@ -27,15 +27,16 @@ class Estimator:
             self.past_preds.append(self.current_pred)
         # Report accuracy statistics.
         if request == 'FINISH':
-            log('---FINISH---')
-            log(f'My ID: {self.agent.id}')
+            logger.log('---FINISH---')
+            #logger.log(f'My ID: {self.agent.id}')
             for player in self.state.player_list:
-                log(f'AGENT {player} ACCURACY: {self.state.get_player_accuracy(player)}')
+                #logger.log(f'{player}:{self.state.get_player_accuracy(player)}')
+                logger.log(f'{player}:{self.state.voter_accuracy_good[player]}/{self.state.votes_total_good[player]}')
             self.correct_preds += self.state.get_prediction_accuracy(self.past_preds)
             self.total_preds += len(self.past_preds)
             self.past_preds = []
             self.predictions = None
-            log(f'PREDICTOR ACCURACY: {self.correct_preds/self.total_preds}')
+            #logger.log(f'PREDICTOR ACCURACY: {self.correct_preds/self.total_preds}')
         if request == 'DAILY_INITIALIZE':
             if self.agent.role == 'BODYGUARD' and self.state.day > 1 and (not len(self.state.murdered_players.values()) or max(self.state.murdered_players.values()) != self.state.day):
                 self.state.confirmed[self.agent.target] = 'HUMAN'

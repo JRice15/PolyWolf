@@ -22,23 +22,22 @@ class NeuralAgent(Agent):
         self.predictions = None
 
     def update(self, base_info, diff_data, request):
-        self.predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
-        if type(self.predictions) != type(None) and not self.predictions.empty:
-            self.predictions = self.predictions.to_numpy()
+        predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
+        if type(predictions) != type(None) and not predictions.empty:
+            self.predictions = predictions.to_numpy()
             offset = max(abs(min(self.predictions.flatten())), abs(max(self.predictions.flatten())))
             for row in self.predictions:
                 row += offset
                 row /= sum(row)
-        else: self.predictions = None
         super().update(base_info, diff_data, request)
 
     def choose_vote(self):
         if self.role != 'WEREWOLF' and self.role != 'POSSESSED':
             if type(self.predictions) != type(None):
-                suspicions = self.predictions[:,-1]
+                suspicions = self.predictions[:,-1] + self.predictions[:,2]
                 for i, _ in enumerate(suspicions):
                     if i not in self.state.current_living_players: suspicions[i] = -1
-                id = np.argmax(suspicions)+1
+                id = np.argmax(suspicions) + 1
                 return int(id)
         return self.id
 
