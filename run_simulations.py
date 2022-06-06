@@ -29,6 +29,7 @@ ALL_AGENTS = {
     "rando": f"python,{ROOT}/our_agent/test/rando.py",
     "sheep": f"python,{ROOT}/our_agent/test/sheep.py",
     "spamton": f"python,{ROOT}/our_agent/test/spamton.py",
+    "PolyWolf": f"python,{ROOT}/our_agent/polywolf.py",
     # broken for some reason
     # "Sashimi": "java,jp.ac.tsukuba.s.s2020602.SashimiRoleAssignPlayer",
 }

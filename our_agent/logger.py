@@ -1,5 +1,6 @@
 import os
 
+os.makedirs("python_trace", exist_ok=True)
 filename = ''
 
 def reserve_id():

@@ -52,11 +52,15 @@ play_counts = df.applymap(lambda x: int(x.split("/")[1]))
 overall = win_counts.sum(axis=1) / play_counts.sum(axis=1)
 overall = overall.sort_values(ascending=False)
 colors = ["forestgreen" if x == "PolyWolf" else "darkturquoise" for x in overall.index]
-seaborn.barplot(y=overall.index, x=overall.values, palette=colors)
+ax = seaborn.barplot(y=overall.index, x=overall.values, palette=colors)
+ax.bar_label(ax.containers[0], fmt="%.3f", padding=3)
+low, high = plt.xlim()
+plt.xlim(low, high+0.05)
 plt.title("Overall win rate")
 plt.tight_layout()
 plt.show()
 
+exit()
 
 # role-wise win rates
 win_rates = win_counts / play_counts
