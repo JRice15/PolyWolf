@@ -5,7 +5,7 @@ A project for CSC 570: AI in Games with Dr. Canaan, at California Polytechnic St
 
 
 ## External Resource Acknowledgements
-This is an agent capable of playing the social deduction game _Werewolf_, following the specifications of the [AIWolf Project](http://aiwolf.org). This repository has been forked from [the official repository by the AIWolf project](https://github.com/aiwolf/AIWolfPy), and was originally created by [Kei Harada](https://github.com/k-harada).
+This is an agent capable of playing the social deduction game _Werewolf_, following the specifications of the [AIWolf Project](http://aiwolf.org). This repository has been forked from [the official repository by the AIWolf project](https://github.com/aiwolf/AIWolfPy), and was originally created by [Kei Harada](https://github.com/k-harada). It also contains a local copy of the [AIWolf Server](http://aiwolf.org/en/server) software, which enables running simulated _Werewolf_ games.
 
 This repository includes the source code for a number of previous years' agents for simulation purposes, which can be found on the [AIWolf site](http://aiwolf.org/en/archives/2620). The following agents are included in `other_agents`:
 * HALU
