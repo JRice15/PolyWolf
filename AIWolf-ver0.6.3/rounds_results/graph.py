@@ -32,7 +32,7 @@ for line in vals:
     counts[key]['town win rate'] = (val[0][0] + val[1][0] + val[3][0] + val[4][0]) / (val[0][1] + val[1][1] + val[3][1] + val[4][1])
     counts[key]['evil win rate'] = (val[2][0] + val[5][0]) / (val[2][1] + val[5][1])
     counts[key]['town rate'] = (val[0][1] + val[1][1] + val[3][1] + val[4][1]) / sum([pair[1] for pair in val])
-    counts[key]['win rate'] = (val[0][1] + val[1][1] + val[3][1] + val[4][1]) / sum([pair[1] for pair in val])
+    counts[key]['win rate'] = sum([pair[0] for pair in val]) / sum([pair[1] for pair in val])
 
 # Graph 1: Town Rate vs. Win Rate
 plt.rcParams.update({'font.size': 14})
