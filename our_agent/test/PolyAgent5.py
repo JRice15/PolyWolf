@@ -41,11 +41,15 @@ class PolyAgent5(Agent):
         self.claimed_target = -1
         self.real_target = -1
         self.competing_seers = set()
+        self.initial_competing_seers = set()
         self.claimed_werewolf = set()
+
+        #POSSESSED properties
+        self.accusers = []
+        self.assumed_werewolf = -1
 
         #WEREWOLF properties
         self.claimed_possessed = set()
-        self.enemy = -1
         
     def check_alive(self):
         result = []
@@ -99,7 +103,7 @@ class PolyAgent5(Agent):
                         agent_accusing = int(diff_data["agent"][i])
                         agent_accused = int(diff_data["text"][i].split()[1][6:8])
                         if (self.myrole == "WEREWOLF") and (agent_accused == self.myid):
-                            self.enemy = agent_accusing
+                            self.accusers.append(agent_accusing)
                             print("agent", agent_accusing, "accused me")
 
         if request == "DAILY_INITIALIZE":
@@ -192,8 +196,6 @@ class PolyAgent5(Agent):
 
         if self.myrole == 'WEREWOLF':
             if self.talk_turn > 2 and self.talk_turn < 13:
-                if self.enemy != -1:
-                    return cb.vote(self.enemy)
                 return cb.vote(self.claimed_target)
             if self.talk_turn >= 13:
                 return "Over"
@@ -206,9 +208,11 @@ class PolyAgent5(Agent):
                     print("WEREWOLF day 1 turn 2")
                     if len(self.competing_seers) > 0:
                         self.claimed_target = random.choice(list(self.competing_seers))
+                        # self.real_target = random.choice(list(set(self.others_living) - self.competing_seers))
                         return cb.divined(self.claimed_target, "WEREWOLF")
                     else:
                         # pick a random target
+                        print("picked random target")
                         self.claimed_target = random.choice(list(set(self.others_living)))
                         return cb.divined(self.claimed_target, "WEREWOLF")
 
@@ -218,10 +222,13 @@ class PolyAgent5(Agent):
                     if len(self.competing_seers) == 0:
                         return cb.comingout(self.myid, "WEREWOLF")
                     else:
-                        return cb.comingout(self.myid, "WEREWOLF")
+                        self.claimed_target = self.competing_seers.pop()
+                        self.real_target = (set(self.others_living) - {self.claimed_target}).pop()
+                        return cb.divined(self.claimed_target, "WEREWOLF")
                         
                 if self.talk_turn == 2:
                     if len(self.competing_seers) == 0:
+                        print("No competing seers")
                         if len(self.claimed_possessed) < 2:
                             self.claimed_target = random.choice(list(set(self.others_living) - self.claimed_possessed))
                         else:
@@ -229,10 +236,9 @@ class PolyAgent5(Agent):
                         print("Claimed WEREWOLF")
                         return cb.vote(self.claimed_target)
                     else:
-                        print("Claiming SEER")
                         if len(self.competing_seers) == 1:
-                            self.claimed_target = self.competing_seers.pop()
-                            return cb.divined(self.claimed_target, "WEREWOLF")
+                            print("Claiming SEER")
+                            return cb.vote(self.claimed_target)
                         else:
                             print("Two competing seers")
                             self.claimed_target = random.choice(self.others_living)
@@ -271,7 +277,62 @@ class PolyAgent5(Agent):
                     if self.claimed_target != -1:
                         return cb.vote(self.claimed_target)
                     
-
+        if self.myrole == 'POSSESSED':
+            if self.day == 1:
+                print("POSSESSED day 1")
+                if self.talk_turn == 1:
+                    return cb.comingout(self.myid, "SEER")
+                elif self.talk_turn == 2:
+                    self.initial_competing_seers.update(self.competing_seers)
+                    if len(self.competing_seers) == 1:
+                        print("POSSESSED against real seer")
+                        self.assumed_werewolf = self.choose_vote()
+                        self.claimed_target = random.choice(list(set(self.others_living) - self.competing_seers))
+                        return cb.divined(self.claimed_target, "WEREWOLF")
+                    elif len(self.competing_seers) == 2:
+                        print("Guessing real human")
+                        guessed_human = random.choice(list(set(self.others_living) - self.competing_seers))
+                        return cb.divined(guessed_human, "HUMAN")
+                elif self.talk_turn == 3:
+                    if len(self.competing_seers) == 2:
+                        print("two seers logic")
+                        if len(self.accusers) == 1:
+                            print("Found an accusser in round 3")
+                            self.assumed_werewolf = self.accusers[0]
+                            self.claimed_target = self.assumed_werewolf
+                            self.real_target = list(self.competing_seers - {self.assumed_werewolf})[0]
+                        else:
+                            self.assumed_werewolf = self.choose_vote()
+                            self.claimed_target = list(self.competing_seers - {self.assumed_werewolf})[0]
+                    return cb.vote(self.claimed_target)
+                elif self.talk_turn < 6:
+                    return cb.vote(self.claimed_target)
+                else:
+                    return cb.over()
+            if self.day == 2:
+                print("POSSESSED day 2")
+                if self.talk_turn == 1:
+                    if len(self.competing_seers) == 1:
+                        if len(self.initial_competing_seers) == 1:
+                            print("POSSESSED against real seer day 2")
+                            self.claimed_target = self.competing_seers.pop()
+                            return cb.comingout(self.myid, "WEREWOLF")
+                        else:
+                            print("WOLF and POSSESSED claiming seer")
+                            self.claimed_target = list(self.competing_seers)[0]
+                            self.real_target = (set(self.others_living) - {self.claimed_target}).pop()
+                            return cb.divined(self.claimed_target, "WEREWOLF")
+                    elif len(self.competing_seers) == 2:
+                        print("two seers in day 2")
+                        return cb.comingout(self.myid, "POSSESSED")
+                    else:
+                        print("No competing seers in day 2")
+                elif self.talk_turn < 6:
+                    return cb.vote(self.claimed_target)
+                elif self.talk_turn >= 6:
+                        return cb.over()
+                if self.claimed_target != -1:
+                    return cb.vote(self.claimed_target)
 
         target = self.choose_vote()
         if target and self.my_vote != target:
@@ -286,10 +347,15 @@ class PolyAgent5(Agent):
             else:
                 return self.claimed_target
         elif self.myrole == "WEREWOLF":
-            if self.enemy != -1:
-                return self.enemy
+            if self.real_target != -1:
+                return self.real_target
             return self.claimed_target
         elif self.myrole == "VILLAGER":
+            if self.real_target != -1:
+                return self.real_target
+            elif self.claimed_target != -1:
+                return self.claimed_target
+        elif self.myrole == "POSSESSED":
             if self.real_target != -1:
                 return self.real_target
             elif self.claimed_target != -1:
