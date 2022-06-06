@@ -6,7 +6,7 @@ def access_data(frame, *labels):
 # A record of the game state, from the perspective of a single agent.
 class GameState:
     def __init__(self):
-        self.day = 0
+        self.day = -1
         self.games = 0
         self.roles_counts = {}                  # dict of {role name : count}
         self.player_list = []
@@ -31,6 +31,9 @@ class GameState:
         self.lifespans = defaultdict(list)
         self.killed_count = Counter()
         self.human_games_played = Counter()
+        # Tracking role claims
+        self.claims = {}
+        self.claims_results = {}
     def get_agent(self, text):
         return int(text.split('[')[1].split(']')[0])
     def update(self, diff_data, request):
@@ -40,6 +43,26 @@ class GameState:
                     speaker = int(speaker)
                     target = self.get_agent(content)
                     self.votes_current[speaker] = target
+                if content.startswith('COMINGOUT'):
+                    speaker = int(speaker)
+                    role = content.split(' ')[-1]
+                    self.claims[speaker] = role
+                    if speaker not in self.claims_results:
+                        self.claims_results[speaker] = {'WEREWOLF':[],'HUMAN':[]}
+                if content.startswith('DIVINED') or content.startswith('IDENTIFIED'):
+                    speaker = int(speaker)
+                    target = self.get_agent(content)
+                    species = content.split(' ')[-1]
+                    if speaker not in self.claims_results:
+                        self.claims_results[speaker] = {'WEREWOLF':[],'HUMAN':[]}
+                    self.claims_results[speaker][species].append(target)
+                if content.startswith('GUARDED'):
+                    speaker = int(speaker)
+                    target = self.get_agent(content)
+                    if self.day > 1 and (not len(self.murdered_players.values()) or max(self.murdered_players.values()) != self.day):
+                        if speaker not in self.claims_results:
+                            self.claims_results[speaker] = {'WEREWOLF':[],'HUMAN':[]}
+                        self.claims_results[speaker]['HUMAN'].append(target)
         elif request == 'VOTE':
             pass
         elif request == 'WHISPER':
@@ -118,7 +141,9 @@ class GameState:
             self.executed_players = {}
             self.murdered_players = {}
             self.confirmed = {}
-            self.day = 0
+            self.claims = {}
+            self.claims_results = {}
+            self.day = -1
         else:
             raise RuntimeError
     def vote_tally(self):

@@ -4,9 +4,9 @@ from policies.base_agenda import Agenda
 class Fear(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.05
-        self.weights['attack'] = 1
-        self.weights['scan'] = 1
+        self.weights['vote'] = 0.1
+        self.weights['attack'] = 0.5
+        self.weights['scan'] = 0.25
     def get_threats(self):
         threats = {}
         if self.agent.role == 'WEREWOLF' or self.agent.role == 'POSSESSED':

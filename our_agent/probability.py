@@ -16,7 +16,10 @@ class Estimator:
         self.correct_preds = 0
         self.total_preds = 0
     def update(self, base_info, diff_data, request):
-        predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
+        try:
+            predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
+        except KeyError: # If there's a word in here we don't have a one-hot encoding for.
+            predictions = None # Will only happen if an agent is saying something nonsensical, like claiming to be a role that does not exist in this game.
         if type(predictions) != type(None) and not predictions.empty:
             self.predictions = predictions.to_numpy()
             offset = max(abs(min(self.predictions.flatten())), abs(max(self.predictions.flatten())))
@@ -60,6 +63,12 @@ class Estimator:
         else:
             suspicions = self.predictions[:,-1] + self.predictions[:,2] # Prob Werewolf + Possessed
             suspicions = {player_id:suspicions[player_id-1] for player_id in self.state.current_living_players}
+            for agentid in suspicions:
+                if agentid in self.state.confirmed:
+                    if self.state.confirmed[agentid] == 'WEREWOLF':
+                        suspicions[agentid] = 1
+                    else:
+                        suspicions[agentid] = self.predictions[:,2][agentid-1]
         return suspicions
     def prob_given_player(self, player_accuracy_village, player_accuracy_werewolf, player_sus):
         if player_accuracy_werewolf == None: player_accuracy_werewolf = 0
@@ -82,6 +91,7 @@ class Estimator:
         #return prob_true
     def vote_analysis(self):
         evil_probabilities = self.estimate_suspicions()
+        '''
         probs_table = {agentid:[evil_probabilities[agentid]] for agentid in self.state.current_living_players} #defaultdict(list)
         for agentid in self.state.votes_current.keys():
             if agentid == self.agent.id: continue
@@ -95,4 +105,5 @@ class Estimator:
         probs_table[self.current_pred].append(prob)
         for target in probs_table.keys():
             evil_probabilities[target] = self.aggregate_probs(probs_table[target], self.prior(target))
+        '''
         return evil_probabilities

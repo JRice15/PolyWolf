@@ -10,18 +10,20 @@ class Analysis(Agenda):
         self.weights['protect'] = 1
         self.weights['scan'] = 1
         self.reads = None
+    '''
         self.last_vote = None
         self.last_day = None
+    '''
     def reset(self):
         self.reads = None
-        self.last_vote = None
-        self.last_day = None
     # Announce who we are voting for, if we have anything new to say about that.
     def talk(self):
-        if self.agent.my_vote and (self.last_vote != self.agent.my_vote or self.last_day != self.agent.state.day):
-            self.last_vote = self.agent.my_vote
-            self.last_day = self.agent.state.day
-            return {cb.vote(self.agent.my_vote):1}
+        #if self.agent.my_vote and (self.last_vote != self.agent.my_vote or self.last_day != self.agent.state.day):
+            #self.last_vote = self.agent.my_vote
+            #self.last_day = self.agent.state.day
+        if self.agent.my_vote:
+            if self.agent.id not in self.agent.state.votes_current or self.agent.my_vote != self.agent.state.votes_current[self.agent.id]:
+                return {cb.vote(self.agent.my_vote):1}
         return None
     # Vote for suspicious people.
     def vote(self):
@@ -36,7 +38,11 @@ class Analysis(Agenda):
     def protect(self):
         if self.reads:
             return {id:(1-self.reads[id]) if id != self.agent.id else 0 for id in self.reads}
-    # Scan suspicious people.
+    # Scan suspicious people (who we haven't already scanned!).
     def scan(self):
         if self.reads:
-            return self.reads
+            adjusted_reads = self.reads.copy()
+            for read in adjusted_reads:
+                if read in self.agent.state.confirmed:
+                    adjusted_reads[read] = 0
+            return adjusted_reads

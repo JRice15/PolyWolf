@@ -11,14 +11,18 @@ import logger
 
 from policies.analysis import Analysis
 from policies.fake_analysis import FakeAnalysis
+from policies.troll_analysis import TrollAnalysis
+from policies.consolidation import Consolidation
 from policies.dissent import Dissent
+from policies.chaos import Chaos
 from policies.pragmatism import Pragmatism
 from policies.fear import Fear
 from policies.prioritize_seer import SeerPriority
 from policies.prioritize_medium import MediumPriority
 from policies.prioritize_bodyguard import BodyguardPriority
+from policies.duplicity import Duplicity
 
-policies = [Analysis, FakeAnalysis, Dissent, Pragmatism, Fear, SeerPriority, MediumPriority, BodyguardPriority]
+policies = [Analysis, FakeAnalysis, TrollAnalysis, Consolidation, Dissent, Chaos, Pragmatism, Fear, SeerPriority, MediumPriority, BodyguardPriority, Duplicity]
 
 class PolyWolf(Agent):
     def __init__(self, agent_name):
@@ -33,16 +37,26 @@ class PolyWolf(Agent):
         self.estimator.update(base_info, diff_data, request)
         if request == 'FINISH':
             for agenda in self.agendas: agenda.reset()
+        if request == 'DAILY_INITIALIZE':
+            logger.log(self.state.confirmed)
 
     def make_policy_decision(self, request):
         policy_values = defaultdict(float)
         for agenda in self.agendas:
             proposals = getattr(agenda, request)()
-            if proposals == None: continue
+            if not proposals: continue
+            #lower = min(proposals.values()) # If the agenda doesn't speak up for a decision, it is assumed to be of zero value to that agenda
+            #proposals = {proposal:proposals[proposal]-lower for proposal in proposals}
+            upper = max(proposals.values())
+            if upper == 0: continue
+            proposals = {proposal:proposals[proposal]/upper for proposal in proposals}
             for proposal in proposals:
-                policy_values[proposal] += proposals[proposal] * agenda.weights[request] # TODO: Normalize this properly, so the weights make more sense.
+                policy_values[proposal] += proposals[proposal] * agenda.weights[request]
         if policy_values:
-            return max(policy_values, key=policy_values.get)
+            #logger.log(policy_values)
+            decision = max(policy_values, key=policy_values.get)
+            logger.log(f'role {self.role},\tday {self.state.day},\trequest {request},\tdecision {decision}')
+            return decision
         return None
 
     def choose_vote(self):
@@ -65,21 +79,23 @@ class PolyWolf(Agent):
         return cb.over()
 
     def attack(self):
-        target = self.make_policy_decision('attack')
-        if target: return target
+        self.target = self.make_policy_decision('attack')
+        if self.target: return self.target
         return self.id
 
     def divine(self):
-        target = self.make_policy_decision('scan')
-        if target: return target
+        self.target = self.make_policy_decision('scan')
+        if self.target: return self.target
         return self.id
 
     def guard(self):
-        target = self.make_policy_decision('protect')
-        if target: return target
+        self.target = self.make_policy_decision('protect')
+        if self.target: return self.target
         return self.id
 
 idx = logger.reserve_id()
+logger.log(f'Reserved {idx}')
+
 agent = PolyWolf(f'PolyWolf-{idx}')
 
 if __name__ == '__main__':

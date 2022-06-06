@@ -4,8 +4,8 @@ from policies.base_agenda import Agenda
 class Pragmatism(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['protect'] = 0.5
-        self.weights['scan'] = 0.5
+        self.weights['protect'] = 0.25
+        self.weights['scan'] = 0.25
     # Scan people who aren't gonna die on you.
     def scan(self):
         self.values = {}
