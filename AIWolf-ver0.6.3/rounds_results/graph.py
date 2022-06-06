@@ -3,6 +3,10 @@
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib as mpl
+
+import seaborn
+seaborn.set()
 
 LOOKUP = {
     0:'bodyguard',
@@ -70,4 +74,21 @@ for i, txt in enumerate(labels):
     ax.annotate(txt, (x[i], y[i]), fontsize=8)
 
 plt.title(f"Pearson Correlation Coefficient: {np.corrcoef(x,y)[0][1]:.5f}", fontsize=16)
+plt.show()
+
+
+# voting accuracy
+voting = [line.strip().split("\t") for line in blocks[2].split("\n") if line.strip() != ""]
+names = [x[1] for x in voting]
+accs = [x[0].split("/") for x in voting]
+accs = [int(x[0]) / int(x[1]) for x in accs]
+
+sorted_accs = sorted(zip(names, accs), key=lambda x: x[1], reverse=False)
+names, accs = zip(*sorted_accs)
+
+bars = plt.barh(names, accs, align="center")
+plt.xlim(min(accs) - 0.05, max(accs) + 0.08)
+plt.xlabel("Voting accuracy")
+plt.gca().bar_label(bars, fmt="%.3f", padding=3)
+plt.tight_layout()
 plt.show()

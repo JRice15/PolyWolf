@@ -114,7 +114,6 @@ def build_model():
 
     rnn_states = []
     for i in range(ARGS.n_layers):
-        # for now, just throw away the rnn state
         full_features, state = get_rnn_layer(i)(full_features, initial_state=inpt_states[:,i])
         # add dim
         state = layers.Reshape((1,-1))(state)
