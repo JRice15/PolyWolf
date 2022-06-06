@@ -41,3 +41,6 @@ To train the neural network yourself on our pre-generated logs, navigate to `our
 `python3 train_rnn.py --lr 0.1`
 
 This script will save the best model to `model.h5`. A pretrained model is provided in `pretrained_model.h5`, which is what is loaded by the RNN estimator during gameplay. It trained for over 100 epochs. To use your trained model instead, rename it to overwrite `pretrained_model.h5`.
+
+# Results Plots
+To generate plots from the paper, navigate to `AIWolf-ver0.6.3/rounds_results/`. Run `python3 graph.py base.txt` for voting accuracy plots. Run `python3 graph_winrates.py latest_results.txt` for win rate plots (the voting accuracy plots from that txt file are innaccurate, because of a now-fixed bug in voting accuracy aggregation).
