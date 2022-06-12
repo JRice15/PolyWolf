@@ -5,7 +5,7 @@ from collections import defaultdict
 class Dissent(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.1
+        self.weights['vote'] = 1000
     # Be contrary!
     def vote(self):
         tally = self.agent.state.vote_tally()

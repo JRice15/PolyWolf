@@ -29,7 +29,7 @@ class Analysis(Agenda):
     def vote(self):
         if self.agent.role == 'WEREWOLF' or self.agent.role == 'POSSESSED': return None
         if len(self.agent.state.player_list) > 8:
-            self.reads = self.agent.estimator.vote_analysis()
+            self.reads = self.agent.estimator.vote_analysis_aggregate()
         else:
             return None # Todo: Implement analysis rules for 5-player games.
         self.reads[self.agent.id] = 0
@@ -40,9 +40,8 @@ class Analysis(Agenda):
             return {id:(1-self.reads[id]) if id != self.agent.id else 0 for id in self.reads}
     # Scan suspicious people (who we haven't already scanned!).
     def scan(self):
-        if self.reads:
-            adjusted_reads = self.reads.copy()
-            for read in adjusted_reads:
-                if read in self.agent.state.confirmed:
-                    adjusted_reads[read] = 0
-            return adjusted_reads
+        reads = self.agent.estimator.vote_analysis_neural()
+        for read in reads:
+            if read in self.agent.state.confirmed:
+                reads[read] = 0
+        return reads

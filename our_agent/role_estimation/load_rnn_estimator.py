@@ -11,6 +11,12 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+
+if len(tf.config.list_physical_devices('GPU')):
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = tf.compat.v1.Session(config=config)
+
 from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from tensorflow.keras import Model

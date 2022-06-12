@@ -34,10 +34,13 @@ class GameState:
         # Tracking role claims
         self.claims = {}
         self.claims_results = {}
+        # Tracking number of talks left in the day
+        self.talks_remaining = 10
     def get_agent(self, text):
         return int(text.split('[')[1].split(']')[0])
     def update(self, diff_data, request):
         if request == 'TALK':
+            self.talks_remaining -= 1
             for speaker, content in access_data(diff_data, 'agent', 'text'):
                 if content.startswith('VOTE Agent'):
                     speaker = int(speaker)
@@ -55,14 +58,16 @@ class GameState:
                     species = content.split(' ')[-1]
                     if speaker not in self.claims_results:
                         self.claims_results[speaker] = {'WEREWOLF':[],'HUMAN':[]}
-                    self.claims_results[speaker][species].append(target)
+                    if target not in self.claims_results[speaker][species]:
+                        self.claims_results[speaker][species].append(target)
                 if content.startswith('GUARDED'):
                     speaker = int(speaker)
                     target = self.get_agent(content)
                     if self.day > 1 and (not len(self.murdered_players.values()) or max(self.murdered_players.values()) != self.day):
                         if speaker not in self.claims_results:
                             self.claims_results[speaker] = {'WEREWOLF':[],'HUMAN':[]}
-                        self.claims_results[speaker]['HUMAN'].append(target)
+                        if target not in self.claims_results[speaker]['HUMAN']:
+                            self.claims_results[speaker]['HUMAN'].append(target)
         elif request == 'VOTE':
             pass
         elif request == 'WHISPER':
@@ -76,6 +81,7 @@ class GameState:
         elif request == 'DAILY_INITIALIZE':
             self.day += 1
             self.last_attacked_player = -1
+            self.talks_remaining = 10
             actual_votes = {}
             for event, agent, speaker, content in access_data(diff_data, 'type', 'agent', 'idx', 'text'):
                 event = str(event)

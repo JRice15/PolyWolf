@@ -5,7 +5,7 @@ class Pragmatism(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
         self.weights['protect'] = 0.25
-        self.weights['scan'] = 0.25
+        self.weights['scan'] = 0.05
     # Scan people who aren't gonna die on you.
     def scan(self):
         self.values = {}

@@ -1,5 +1,9 @@
 from policies.base_agenda import Agenda
 
+# Todo: Bussing policy.
+# Could instead make "analysis" an agenda that functions consistently across the board, but werewolf/possessed get special agendas that push back against that one.
+# Hmmmmmmm
+
 # Agent pretends to do follow what Analysis says, but without voting for any werewolves.
 class FakeAnalysis(Agenda):
     def __init__(self, agent):
@@ -12,7 +16,7 @@ class FakeAnalysis(Agenda):
     # Vote for suspicious people who aren't actually werewolves.
     def vote(self):
         if self.agent.role != 'WEREWOLF': return None
-        self.true_reads = self.agent.estimator.vote_analysis()
+        self.true_reads = self.agent.estimator.vote_analysis_neural()
         fake_reads = self.true_reads.copy()
         for player in self.agent.state.confirmed:
             if self.agent.state.confirmed[player] == 'WEREWOLF':

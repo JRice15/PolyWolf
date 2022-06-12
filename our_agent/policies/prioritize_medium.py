@@ -5,7 +5,13 @@ class MediumPriority(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
         self.weights['attack'] = 0.25
-        self.weights['protect'] = 0.25
+        self.weights['protect'] = 0.5
+        self.weights['talk'] = 2
+        self.last_claimed = None
+        self.last_shared = None
+    def reset(self):
+        self.last_claimed = None
+        self.last_shared = None
     # The medium must die!
     def attack(self):
         if type(self.agent.estimator.predictions) == type(None): return None
@@ -15,4 +21,3 @@ class MediumPriority(Agenda):
     # The medium must survive!
     def protect(self):
         return self.attack()
-    # TODO: Implement something to claim medium and disprove any fake seers.

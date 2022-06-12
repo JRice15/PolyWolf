@@ -8,5 +8,5 @@ class TrollAnalysis(Agenda):
     # Vote for villagers!
     def vote(self):
         if self.agent.role != 'POSSESSED': return None
-        reads = self.agent.estimator.vote_analysis()
+        reads = self.agent.estimator.vote_analysis_neural()
         return {id:(1-reads[id]) if id != self.agent.id else 0 for id in reads}

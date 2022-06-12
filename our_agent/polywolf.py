@@ -12,6 +12,7 @@ import logger
 from policies.analysis import Analysis
 from policies.fake_analysis import FakeAnalysis
 from policies.troll_analysis import TrollAnalysis
+from policies.adaptive_analysis import AdaptiveAnalysis
 from policies.consolidation import Consolidation
 from policies.dissent import Dissent
 from policies.chaos import Chaos
@@ -20,9 +21,11 @@ from policies.fear import Fear
 from policies.prioritize_seer import SeerPriority
 from policies.prioritize_medium import MediumPriority
 from policies.prioritize_bodyguard import BodyguardPriority
+from policies.honesty import Honesty
 from policies.duplicity import Duplicity
 
-policies = [Analysis, FakeAnalysis, TrollAnalysis, Consolidation, Dissent, Chaos, Pragmatism, Fear, SeerPriority, MediumPriority, BodyguardPriority, Duplicity]
+policies = [Analysis, FakeAnalysis, TrollAnalysis, AdaptiveAnalysis, Consolidation, Dissent, Pragmatism, Fear, SeerPriority, MediumPriority, BodyguardPriority, Honesty, Duplicity]
+#excluded: Chaos,
 
 class PolyWolf(Agent):
     def __init__(self, agent_name):
@@ -74,7 +77,7 @@ class PolyWolf(Agent):
         return self.choose_vote()
 
     def whisper(self):
-        target = self.make_policy_decision('attack')
+        target = self.make_policy_decision('attack') # Todo: could do some consolidating policy with other agents attack wishes
         if target: return cb.attack(target)
         return cb.over()
 

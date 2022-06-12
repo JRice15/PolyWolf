@@ -46,10 +46,11 @@ class Duplicity(Agenda):
                     self.last_claimed = self.agent.state.day
                     return {cb.comingout(self.agent.id, 'MEDIUM'):1}
                 elif not bg:
-                    if self.agent.state.day > 1 and (not len(self.agent.state.murdered_players.values()) or max(self.agent.state.murdered_players.values()) != self.agent.state.day):
-                        self.fakeclaimed = 'BODYGUARD'
-                        self.last_claimed = self.agent.state.day
-                        return {cb.comingout(self.agent.id, 'BODYGUARD'):1}
+                    pass
+                    #if self.agent.state.day > 1 and (not len(self.agent.state.murdered_players.values()) or max(self.agent.state.murdered_players.values()) != self.agent.state.day):
+                    #    self.fakeclaimed = 'BODYGUARD'
+                    #    self.last_claimed = self.agent.state.day
+                    #    return {cb.comingout(self.agent.id, 'BODYGUARD'):1}
         if self.fakeclaimed:
             if self.last_claimed != self.agent.state.day:
                 self.last_claimed = self.agent.state.day

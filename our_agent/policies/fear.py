@@ -4,8 +4,9 @@ from policies.base_agenda import Agenda
 class Fear(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.1
+        self.weights['vote'] = 10
         self.weights['attack'] = 0.5
+        #self.weights['protect'] = 0
         self.weights['scan'] = 0.25
     def get_threats(self):
         threats = {}
@@ -21,12 +22,35 @@ class Fear(Agenda):
                 else: threats[player] = 0.2
         threats[self.agent.id] = 0
         return threats
+    def get_expected_threats(self):
+        threats = {}
+        if self.agent.role == 'WEREWOLF' or self.agent.role == 'POSSESSED':
+            for player in self.agent.state.current_living_players:
+                if self.agent.state.games_good[player] > 20:
+                    threats[player] = self.agent.state.wins_good[player] / self.agent.state.games_good[player]
+                else: threats[player] = 0.6
+        else:
+            for player in self.agent.state.current_living_players:
+                if self.agent.state.games_evil[player] > 10 and self.agent.state.games_good[player] > 10:
+                    threats[player] = (self.agent.state.wins_evil[player] / self.agent.state.games_evil[player]) / (self.agent.state.wins_good[player]+1 / self.agent.state.games_good[player]+1)
+                else: threats[player] = 0.35
+        threats[self.agent.id] = 0
+        return threats
     # Vote for threatening people.
     def vote(self):
-        return self.get_threats()
+        return self.get_expected_threats()
     # Attack threatening people.
     def attack(self):
         return self.get_threats()
     # Scan threatening people.
     def scan(self):
         return self.get_threats()
+    # Don't protect threatening people.
+    #def protect(self):
+    #    threats = self.get_expected_threats()
+    #    top = max(threats.values())
+    #    return {player:top-threats[player] for player in threats}
+
+# Could potentially be split into two policies:
+#   -Target people who are likely to make you lose
+#   -Target people with a high win rate just to drag them down

@@ -15,6 +15,7 @@ class Estimator:
         self.past_preds = []
         self.correct_preds = 0
         self.total_preds = 0
+        self.last_recorded = 0
     def update(self, base_info, diff_data, request):
         try:
             predictions = self.role_estimator.update_and_predict(base_info=base_info, diff_data=diff_data, request=request)
@@ -26,10 +27,13 @@ class Estimator:
             for row in self.predictions:
                 row += offset
                 row /= sum(row)
-        if request == 'DAILY_INITIALIZE':
+        if request == 'DAILY_INITIALIZE' and self.state.day > 1 and self.state.day != self.last_recorded:
+            self.last_recorded = self.state.day
             self.past_preds.append(self.current_pred)
         # Report accuracy statistics.
         if request == 'FINISH':
+            if self.total_preds > 0:
+                logger.log(f'PREDICTOR ACCURACY: {self.correct_preds/self.total_preds}')
             logger.log('---FINISH---')
             #logger.log(f'My ID: {self.agent.id}')
             for player in self.state.player_list:
@@ -39,7 +43,7 @@ class Estimator:
             self.total_preds += len(self.past_preds)
             self.past_preds = []
             self.predictions = None
-            #logger.log(f'PREDICTOR ACCURACY: {self.correct_preds/self.total_preds}')
+            self.last_recorded = 0
         if request == 'DAILY_INITIALIZE':
             if self.agent.role == 'BODYGUARD' and self.state.day > 1 and (not len(self.state.murdered_players.values()) or max(self.state.murdered_players.values()) != self.state.day):
                 self.state.confirmed[self.agent.target] = 'HUMAN'
@@ -79,19 +83,22 @@ class Estimator:
     # Because everybody's votes, and our own, are *not* independent. Those decisions are made based on a lot of the same information, and often with somewhat similar methods.
     # So instead of multiplying the probabilities, it actually just works better to take the most confident measurement, and take that one as truth.
     # Todo: If there is time, it would be nice to do a comprehensive test to see if max() or average() yields better results. My guess is max() is better but idk.
-    def aggregate_probs(self, probs, prior):
+    def aggregate_probs(self, probs): #, prior):
         probs = [prob for prob in probs if prob != None]
-        all = probs + [prior]
-        return max(all)
+        #all = probs + [prior]
+        return max(probs)
         #if 1 in probs or prior == 1: return 1
         #if 0 in probs or prior == 0: return 0
         #if len(probs) == 0: return prior
         #ratio_true = math.exp( (sum([math.log(prob)-math.log(prior) for prob in probs])+math.log(prior)) - (sum([math.log(1-prob)-math.log(1-prior) for prob in probs])+math.log(1-prior)) )
         #prob_true = ratio_true / (ratio_true+1)
         #return prob_true
-    def vote_analysis(self):
+    def vote_analysis_neural(self):
         evil_probabilities = self.estimate_suspicions()
-        '''
+        return evil_probabilities
+    def vote_analysis_aggregate(self):
+        evil_probabilities = self.estimate_suspicions()
+        self.current_pred = max(evil_probabilities, key=evil_probabilities.get)
         probs_table = {agentid:[evil_probabilities[agentid]] for agentid in self.state.current_living_players} #defaultdict(list)
         for agentid in self.state.votes_current.keys():
             if agentid == self.agent.id: continue
@@ -104,6 +111,8 @@ class Estimator:
         self.current_pred = max(evil_probabilities, key=evil_probabilities.get)
         probs_table[self.current_pred].append(prob)
         for target in probs_table.keys():
-            evil_probabilities[target] = self.aggregate_probs(probs_table[target], self.prior(target))
-        '''
+            evil_probabilities[target] = self.aggregate_probs(probs_table[target])#, self.prior(target))
         return evil_probabilities
+    #def estimate_role_alive(self):
+    # Add up the neural estimate for all of a certain role, living vs. dead, as a probability
+    #player_will_win(self, player_winrate_good, player_winrate_evil, player_sus)
