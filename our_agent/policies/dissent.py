@@ -5,10 +5,10 @@ from collections import defaultdict
 class Dissent(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 1000
+        self.weights['vote'] = 7.5
     # Be contrary!
     def vote(self):
-        tally = self.agent.state.vote_tally()
+        tally = self.state.vote_tally()
         if not tally: return None
         vote_minimum = tally.most_common()[-1][1]
         values = defaultdict(float)

@@ -5,6 +5,7 @@ from collections import defaultdict
 class Agenda:
     def __init__(self, agent):
         self.agent = agent
+        self.state = agent.state
         self.weights = defaultdict(int)
     def reset(self):
         return

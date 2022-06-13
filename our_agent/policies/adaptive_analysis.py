@@ -5,7 +5,7 @@ import math
 class AdaptiveAnalysis(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 1
+        self.weights['vote'] = 0
         self.weight_factor = self.weights['vote']
         self.reads = None
     def reset(self):

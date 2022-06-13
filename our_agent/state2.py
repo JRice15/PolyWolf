@@ -17,7 +17,6 @@ class GameState:
         self.murdered_players = {}
         self.last_attacked_player = -1
         self.confirmed = {}                     # dict of {player id : species}
-        # Tracking votes cast by agents
         self.votes_current = {}                 # dict of {voter id : target id}
         self.votes_history = defaultdict(list)  # dict of {voter id : [target ids list]}
         # Tracking the rate other agents voted for werewolves / possessed.
@@ -25,8 +24,6 @@ class GameState:
         self.voter_accuracy_evil = Counter()
         self.votes_total_good = Counter()
         self.votes_total_evil = Counter()
-        # Tracking werewolf kill votes
-        self.kill_votes = {}
         # Tracking the rate other agents have won, based on alignment.
         self.wins_good = Counter()
         self.wins_evil = Counter()
@@ -41,6 +38,16 @@ class GameState:
         self.claims_results = {}
         # Tracking number of talks left in the day
         self.talks_remaining = 10
+    def game_reset(self):
+        self.current_living_players = self.player_list.copy()
+        self.executed_players = {}
+        self.murdered_players = {}
+        self.confirmed = {}
+        self.claims = {}
+        self.claims_results = {}
+        self.day = -1
+    def game_init(self, base_info):
+        self.day = -1
     def get_agent(self, text):
         return int(text.split('[')[1].split(']')[0])
     def update(self, base_info, diff_data, request):
@@ -74,18 +81,9 @@ class GameState:
                         if target not in self.claims_results[speaker]['HUMAN']:
                             self.claims_results[speaker]['HUMAN'].append(target)
         elif request == 'VOTE':
-            self.talks_remaining -= 1
-            for speaker, content in access_data(diff_data, 'agent', 'text'):
-                if content.startswith('VOTE Agent'):
-                    speaker = int(speaker)
-                    target = self.get_agent(content)
-                    self.votes_current[speaker] = target
+            pass
         elif request == 'WHISPER':
-            for speaker, content in access_data(diff_data, 'agent', 'text'):
-                if content.startswith('ATTACK Agent'):
-                    speaker = int(speaker)
-                    target = self.get_agent(content)
-                    self.kill_votes[speaker] = target
+            pass
         elif request == 'ATTACK':
             pass
         elif request == 'GUARD':
@@ -127,16 +125,18 @@ class GameState:
             self.games += 1
             self.evils = []
             town_wins = True
+            logger.log(base_info)
             for flip in access_data(diff_data, 'text'):
                 flip = flip[0]
-                agent = self.get_agent(flip)
+                logger.log(flip)
+                logger.log(self.get_agent(flip))
+                logger.log('\n\n\n')
                 if flip.endswith('WEREWOLF') or flip.endswith('POSSESSED'):
-                    self.evils.append(agent)
-                if flip.endswith('WEREWOLF'):
-                    if base_info['statusMap'][str(agent)] == 'ALIVE':
-                        town_wins = False
-                else:
-                    self.human_games_played[agent] += 1                
+                    self.evils.append(self.get_agent(flip))
+                if not flip.endswith('WEREWOLF'):
+                    self.human_games_played[self.get_agent(flip)] += 1
+                elif self.get_agent(flip) in self.current_living_players:
+                    town_wins = False
             for player in self.player_list:
                 if player in self.evils:
                     self.games_evil[player] += 1
@@ -159,19 +159,11 @@ class GameState:
             self.votes_history = defaultdict(list)
             for player_id in self.current_living_players:
                 self.lifespans[player_id].append(self.day+1)
-            self.current_living_players = self.player_list.copy()
-            self.executed_players = {}
-            self.murdered_players = {}
-            self.confirmed = {}
-            self.claims = {}
-            self.claims_results = {}
-            self.day = -1
+            self.game_reset()
         else:
             raise RuntimeError
     def vote_tally(self):
         return Counter(self.votes_current.values())
-    def kill_tally(self):
-        return Counter(self.kill_votes.values())
     def get_player_accuracy(self,id,werewolf=False):
         try:
             if werewolf: return self.voter_accuracy_evil[id] / self.votes_total_evil[id]

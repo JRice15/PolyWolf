@@ -7,8 +7,8 @@ import random
 class SeerPriority(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['attack'] = 1
-        self.weights['protect'] = 1
+        self.weights['attack'] = 0
+        self.weights['protect'] = 0
         #self.weights['vote'] = 0.05
     # The seer must die!
     def attack(self):

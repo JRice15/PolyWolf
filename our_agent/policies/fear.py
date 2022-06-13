@@ -1,13 +1,20 @@
 from policies.base_agenda import Agenda
 
+'''
 # Agent pushes to kill off players who historically have a high win rate on the opposite team.
 class Fear(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 10
-        self.weights['attack'] = 0.5
+        self.weights['vote'] = 0
+        self.weights['attack'] = 0
         #self.weights['protect'] = 0
-        self.weights['scan'] = 0.25
+        self.weights['scan'] = 0
+    def get_winrates(self):
+        winrates = {}
+        for player in self.state.current_living_players:
+            if self.state.games > 1:
+                winrates[player] = (self.agent.state.wins_good[player]+self.agent.state.wins_evil[player]) / (self.agent.state.games_good[player]+self.agent.state.games_evil[player])
+        return winrates
     def get_threats(self):
         threats = {}
         if self.agent.role == 'WEREWOLF' or self.agent.role == 'POSSESSED':
@@ -38,7 +45,7 @@ class Fear(Agenda):
         return threats
     # Vote for threatening people.
     def vote(self):
-        return self.get_expected_threats()
+        return self.get_threats()
     # Attack threatening people.
     def attack(self):
         return self.get_threats()
@@ -50,7 +57,27 @@ class Fear(Agenda):
     #    threats = self.get_expected_threats()
     #    top = max(threats.values())
     #    return {player:top-threats[player] for player in threats}
+'''
 
 # Could potentially be split into two policies:
 #   -Target people who are likely to make you lose
 #   -Target people with a high win rate just to drag them down
+
+class Fear(Agenda):
+    def __init__(self, agent):
+        super().__init__(agent)
+        self.weights['vote'] = 1
+        self.weights['attack'] = 0
+    def get_winrates(self):
+        winrates = {}
+        for player in self.state.current_living_players:
+            if self.state.games > 1:
+                winrates[player] = (self.agent.state.wins_good[player]+self.agent.state.wins_evil[player]) / (self.agent.state.games_good[player]+self.agent.state.games_evil[player])
+        return winrates
+    # Vote for threatening people.
+    def vote(self):
+        return self.get_winrates()
+    # Attack threatening people.
+    def attack(self):
+        return self.get_winrates()
+    # Scan threatening people.

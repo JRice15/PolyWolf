@@ -26,7 +26,7 @@ class Agent(object):
             self.state.confirmed = {int(id):rolemap[id] for id in rolemap}
 
     def update(self, base_info, diff_data, request):
-        self.state.update(diff_data, request)
+        self.state.update(base_info, diff_data, request)
 
     def dayStart(self):
         pass

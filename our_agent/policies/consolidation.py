@@ -26,7 +26,7 @@ class Consolidation(Agenda):
 class Consolidation(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.05
+        self.weights['vote'] = 0
     # Sheep!
     def vote(self):
         tally = self.agent.state.vote_tally()

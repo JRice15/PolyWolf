@@ -4,7 +4,7 @@ from policies.base_agenda import Agenda
 class TrollAnalysis(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.5
+        self.weights['vote'] = 0
     # Vote for villagers!
     def vote(self):
         if self.agent.role != 'POSSESSED': return None

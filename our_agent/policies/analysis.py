@@ -6,9 +6,9 @@ class Analysis(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
         self.weights['talk'] = 1
-        self.weights['vote'] = 1
-        self.weights['protect'] = 1
-        self.weights['scan'] = 1
+        self.weights['vote'] = 0
+        self.weights['protect'] = 0
+        self.weights['scan'] = 0
         self.reads = None
     '''
         self.last_vote = None

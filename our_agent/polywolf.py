@@ -58,7 +58,7 @@ class PolyWolf(Agent):
         if policy_values:
             #logger.log(policy_values)
             decision = max(policy_values, key=policy_values.get)
-            logger.log(f'role {self.role},\tday {self.state.day},\trequest {request},\tdecision {decision}')
+            logger.log(f'role {self.role},\tday {self.state.day} (game {self.state.games}),\trequest {request},\tdecision {decision}')
             return decision
         return None
 
@@ -74,7 +74,7 @@ class PolyWolf(Agent):
         return cb.over()
 
     def vote(self):
-        return self.choose_vote()
+        return self.my_vote
 
     def whisper(self):
         target = self.make_policy_decision('attack') # Todo: could do some consolidating policy with other agents attack wishes

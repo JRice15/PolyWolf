@@ -5,7 +5,7 @@ from aiwolfpy import contentbuilder as cb
 class BodyguardPriority(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['attack'] = 0.25
+        self.weights['attack'] = 0
     # The bodyguard must die!
     def attack(self):
         if type(self.agent.estimator.predictions) == type(None): return None

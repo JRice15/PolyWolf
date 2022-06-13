@@ -7,8 +7,8 @@ import random
 class Honesty(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['talk'] = 2
-        self.weights['vote'] = 0.5
+        self.weights['talk'] = 0
+        self.weights['vote'] = 0
         self.last_claimed = None
         self.last_shared = None
     def reset(self):

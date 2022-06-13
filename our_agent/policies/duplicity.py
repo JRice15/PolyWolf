@@ -6,8 +6,8 @@ import random
 class Duplicity(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['talk'] = 2
-        self.weights['vote'] = 2
+        self.weights['talk'] = 0
+        self.weights['vote'] = 0
         self.fakeclaimed = False
         self.fakeclaim_enabled = False
         self.fakeclaim_day = 0

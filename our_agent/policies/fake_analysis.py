@@ -8,8 +8,8 @@ from policies.base_agenda import Agenda
 class FakeAnalysis(Agenda):
     def __init__(self, agent):
         super().__init__(agent)
-        self.weights['vote'] = 0.5
-        self.weights['attack'] = 0.5
+        self.weights['vote'] = 0
+        self.weights['attack'] = 0
         self.true_reads = None
     def reset(self):
         self.true_reads = None
